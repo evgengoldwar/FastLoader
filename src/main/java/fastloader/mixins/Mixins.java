@@ -7,9 +7,12 @@ import javax.annotation.Nonnull;
 
 public enum Mixins implements IMixins {
 
-    EXAMPLE(new MixinBuilder()
+    STARTUP_PROFILER_COMMON(new MixinBuilder()
         .setPhase(Phase.EARLY)
-        .addClientMixins("MixinMinecraft_Example"));
+        .addCommonMixins("MixinProgressManager", "MixinProgressBar")),
+    STARTUP_PROFILER_CLIENT(new MixinBuilder()
+        .setPhase(Phase.EARLY)
+        .addClientMixins("MixinMinecraft_Profiler", "MixinTextureMap_Profiler"));
 
     private final MixinBuilder builder;
 
