@@ -78,7 +78,7 @@ public final class LoadProfiler {
             } catch (Throwable t) {
                 jvmStartMillis = initMillis;
             }
-            gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
+            gcBeans = pauseCollectors(ManagementFactory.getGarbageCollectorMXBeans());
             jitBean = ManagementFactory.getCompilationMXBean();
             classBean = ManagementFactory.getClassLoadingMXBean();
             memoryBean = ManagementFactory.getMemoryMXBean();
@@ -302,7 +302,28 @@ public final class LoadProfiler {
         return sb.toString();
     }
 
-    /** gcMillis, jitMillis, loadedClasses, heapUsedBytes */
+    /**
+     * Collectors whose time actually stops the game. ZGC and Shenandoah report concurrent "Cycles" (work on other
+     * cores while the game keeps running) separately from "Pauses"; G1 on newer JDKs adds "G1 Concurrent GC".
+     */
+    static List<GarbageCollectorMXBean> pauseCollectors(List<GarbageCollectorMXBean> all) {
+        List<GarbageCollectorMXBean> pauses = new ArrayList<>();
+        for (GarbageCollectorMXBean b : all) if (b.getName()
+            .contains("Pause")) pauses.add(b);
+        if (!pauses.isEmpty()) return pauses;
+        List<GarbageCollectorMXBean> stw = new ArrayList<>();
+        for (GarbageCollectorMXBean b : all) {
+            if (!isConcurrent(b)) stw.add(b);
+        }
+        return stw;
+    }
+
+    static boolean isConcurrent(GarbageCollectorMXBean b) {
+        String n = b.getName();
+        return n.contains("Concurrent") || n.contains("Cycles");
+    }
+
+    /** gcPauseMillis, jitMillis, loadedClasses, heapUsedBytes */
     static long[] snapshot() {
         long gc = 0;
         for (GarbageCollectorMXBean b : gcBeans) {

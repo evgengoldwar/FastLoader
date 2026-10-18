@@ -99,7 +99,7 @@ final class ReportWriter {
 
         section(out, "2. Load tree");
         out.printf(
-            " Sections shorter than %d ms are folded. Columns: total | self | %% of total | GC | +classes%n",
+            " Sections shorter than %d ms are folded. Columns: total | self | %% of total | GC pauses | +classes%n",
             LoadProfiler.MIN_REPORT_NANOS / 1_000_000L);
         out.println(" 'self' is time not covered by a child section.");
         out.println();
@@ -316,11 +316,18 @@ final class ReportWriter {
     private static void writeJvm(PrintWriter out, long total) {
         section(out, "7. JVM");
         long[] end = LoadProfiler.ROOT.endStats;
-        out.printf(" GC time:            %s (%.1f%% of total)%n", ms(end[0] * 1_000_000L), pct(end[0] * 1_000_000L, total));
+        out.printf(
+            " GC pauses:          %s (%.1f%% of total) - time the game was actually stopped%n",
+            ms(end[0] * 1_000_000L),
+            pct(end[0] * 1_000_000L, total));
         try {
             for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-                out.printf("   %-30s %6d collections, %s%n", gc.getName(), gc.getCollectionCount(),
-                    ms(gc.getCollectionTime() * 1_000_000L));
+                out.printf(
+                    "   %-30s %6d collections, %s%s%n",
+                    gc.getName(),
+                    gc.getCollectionCount(),
+                    ms(gc.getCollectionTime() * 1_000_000L),
+                    LoadProfiler.isConcurrent(gc) ? "  (concurrent, runs beside the game)" : "");
             }
         } catch (Throwable ignored) {}
         out.printf(" JIT compile time:   %s (all compiler threads, runs in parallel)%n", ms(end[1] * 1_000_000L));
@@ -339,8 +346,8 @@ final class ReportWriter {
         int hints = 0;
         if (end[0] * 1_000_000L > total / 10) {
             hints++;
-            out.println(" * GC took more than 10% of startup. Give the game more heap (-Xmx / -Xms equal),");
-            out.println("   or try a different collector (-XX:+UseG1GC on Java 8, -XX:+UseZGC / Shenandoah on 17+).");
+            out.println(" * GC pauses took more than 10% of startup. Give the game more heap (-Xmx / -Xms equal),");
+            out.println("   or try a concurrent collector (-XX:+UseZGC / Shenandoah on Java 17+).");
         }
         long transformerSum = 0;
         for (Timed t : TransformerProfiler.TIMED) transformerSum += t.nanos.get();
