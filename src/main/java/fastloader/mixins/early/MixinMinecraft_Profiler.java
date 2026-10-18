@@ -8,14 +8,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import fastloader.profiler.LoadProfiler;
-import fastloader.profiler.TransformerProfiler;
 
 @Mixin(Minecraft.class)
 public class MixinMinecraft_Profiler {
 
     @Inject(method = "startGame", at = @At("HEAD"))
     private void fastloader$startGameHead(CallbackInfo ci) {
-        TransformerProfiler.install();
+        LoadProfiler.hook("Minecraft.startGame");
+        LoadProfiler.onLoadingStarted();
         LoadProfiler.milestone("Minecraft.startGame (settings, window, OpenGL)");
     }
 

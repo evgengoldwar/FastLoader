@@ -16,6 +16,7 @@ public class MixinTextureMap_Profiler {
 
     @Inject(method = "loadTextureAtlas", at = @At("HEAD"))
     private void fastloader$loadAtlasHead(CallbackInfo ci) {
+        LoadProfiler.hook("Texture atlases");
         LoadProfiler.begin(
             "atlas@" + System.identityHashCode(this),
             "Texture atlas " + ProfilerUtil.describeTextureMap(this));

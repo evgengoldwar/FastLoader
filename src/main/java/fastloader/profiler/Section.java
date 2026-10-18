@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** One timed node of the startup tree. Mutated only while holding the profiler lock. */
-final class Section {
+public final class Section {
 
     final Section parent;
     final String name;
@@ -17,9 +17,12 @@ final class Section {
     boolean closed;
     String thread;
 
-    /** True for sections created from an FML {@code ProgressManager} bar; its children are the bar's steps. */
-    boolean isBar;
-    String barTitle;
+    /**
+     * What the section is, for the report tables: "bar" / "step" (sampled FML splash bars, tag = bar title), "mod"
+     * (one mod handling one FML event, tag = event class), "listener" (resource reload listener), or null.
+     */
+    String kind;
+    String tag;
     int barSteps;
 
     Section(Section parent, String name, String thread) {

@@ -16,11 +16,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import fastloader.profiler.LoadProfiler.Milestone;
 import fastloader.profiler.TransformerProfiler.Slow;
@@ -113,7 +111,7 @@ final class ReportWriter {
         all.sort((a, b) -> Long.compare(b.selfNanos(), a.selfNanos()));
         int n = 0;
         for (Section s : all) {
-            if (s == root || s.selfNanos() < 1_000_000L) continue;
+            if (s == root || "group".equals(s.kind) || s.selfNanos() < 1_000_000L) continue;
             if (n++ >= TOP) break;
             out.printf(" %9s  %5.1f%%  %s%n", ms(s.selfNanos()), pct(s.selfNanos(), total), s.path());
         }
@@ -123,6 +121,7 @@ final class ReportWriter {
         writeTransformers(out, total);
         writeJvm(out, total);
         writeHints(out, all, total);
+        writeHooks(out);
     }
 
     private static void writeEnvironment(PrintWriter out) {
@@ -160,15 +159,15 @@ final class ReportWriter {
         out.printf(
             " %9s %9s %5.1f%% %7s %7s  %s%s%n",
             ms(s.durationNanos()),
-            s.children == null ? "" : ms(s.selfNanos()),
+            s.children == null || s.parent == null ? "" : ms(s.selfNanos()),
             pct(s.durationNanos(), total),
             s.gcMillis() > 0 ? s.gcMillis() + "gc" : "",
             s.loadedClasses() > 0 ? "+" + s.loadedClasses() : "",
             pad,
-            s.name + (s.isBar ? "  [" + s.barSteps + " steps]" : "")
-                + (s.thread != null && !"Client thread".equals(s.thread) && !"main".equals(s.thread)
-                ? "  [" + s.thread + "]"
-                : ""));
+            s.name + ("bar".equals(s.kind) ? "  [" + s.barSteps + " steps]" : "")
+                + (s.thread != null && !"Client thread".equals(s.thread)
+                    && !"main".equals(s.thread)
+                    && !s.thread.startsWith("FastLoader-") ? "  [" + s.thread + "]" : ""));
         if (s.children == null) return;
         long foldedNanos = 0;
         int folded = 0;
@@ -187,10 +186,12 @@ final class ReportWriter {
     }
 
     private static void writeModTable(PrintWriter out, List<Section> all, long total) {
+        // precise per-mod timing from the LoadController hook; sampled splash bar steps if that hook did not apply
+        String kind = LoadProfiler.HOOKS.containsKey("FML per-mod event handlers") ? "mod" : "step";
         Map<String, long[]> perMod = new LinkedHashMap<>();
         for (Section s : all) {
-            if (s.parent == null || !s.parent.isBar) continue;
-            int phase = modPhase(s.parent.barTitle);
+            if (!kind.equals(s.kind)) continue;
+            int phase = modPhase(s.tag);
             if (phase < 0) continue;
             long[] row = perMod.computeIfAbsent(s.name, k -> new long[PHASES + 1]);
             row[phase] += s.durationNanos();
@@ -199,6 +200,7 @@ final class ReportWriter {
         if (perMod.isEmpty()) return;
 
         section(out, "4. Mods: time spent in each FML lifecycle event handler");
+        if ("step".equals(kind)) out.println(" (from sampled splash bars, a few ms accuracy per entry)");
         out.print(String.format(" %-40s", "Mod"));
         for (String p : MOD_PHASE_SHORT) out.printf(" %9s", p);
         out.printf(" %9s %6s%n", "TOTAL", "%");
@@ -220,8 +222,11 @@ final class ReportWriter {
 
     private static int modPhase(String title) {
         if (title == null) return -1;
+        // accepts bar titles ("PreInitialization") and event classes ("FMLPreInitializationEvent")
         String t = title.toLowerCase()
-            .replaceAll("[^a-z]", "");
+            .replaceAll("[^a-z]", "")
+            .replaceFirst("^fml", "")
+            .replaceFirst("event$", "");
         for (int i = 0; i < MOD_PHASE_TITLES.length; i++) {
             if (Arrays.asList(MOD_PHASE_TITLES[i])
                 .contains(t)) return i;
@@ -230,19 +235,21 @@ final class ReportWriter {
     }
 
     private static void writeResourceListeners(PrintWriter out, List<Section> all) {
+        boolean precise = LoadProfiler.HOOKS.containsKey("Resource reload listeners");
         Map<String, long[]> perListener = new LinkedHashMap<>();
-        int reloads = 0;
+        int reloads = countReloads(all);
         for (Section s : all) {
-            if (s.isBar && "Loading Resource".equals(s.barTitle)) reloads++;
-            if (s.parent == null || !s.parent.isBar || !"Loading Resource".equals(s.parent.barTitle)) continue;
-            long[] row = perListener.computeIfAbsent(s.name, k -> new long[2]);
+            boolean match = precise ? "listener".equals(s.kind)
+                : "step".equals(s.kind) && "Loading Resource".equals(s.tag);
+            if (!match) continue;
+            long[] row = perListener.computeIfAbsent(precise ? s.tag : s.name, k -> new long[2]);
             row[0] += s.durationNanos();
             row[1]++;
         }
         if (perListener.isEmpty()) return;
-        section(out, "5. Resource reload listeners (summed over " + reloads + " resource reload(s))");
-        out.println(" Every full resource reload runs all of these. Vanilla does one reload at startup, mods");
-        out.println(" that call refreshResources() again add a whole extra round.");
+        section(out, "5. Resource reload listeners (" + reloads + " full resource reload(s))");
+        out.println(" Includes the first load when a listener is registered. Every full resource reload runs all");
+        out.println(" of them again; mods that call refreshResources() during startup add a whole extra round.");
         out.println();
         List<Map.Entry<String, long[]>> rows = new ArrayList<>(perListener.entrySet());
         rows.sort((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]));
@@ -251,6 +258,12 @@ final class ReportWriter {
             if (n++ >= TOP) break;
             out.printf(" %9s  x%-3d %s%n", ms(e.getValue()[0]), e.getValue()[1], e.getKey());
         }
+    }
+
+    private static int countReloads(List<Section> all) {
+        int n = 0;
+        for (Section s : all) if ("Minecraft.refreshResources".equals(s.name)) n++;
+        return n;
     }
 
     private static void writeTransformers(PrintWriter out, long total) {
@@ -332,14 +345,10 @@ final class ReportWriter {
             out.println(" * Class transformers took more than 10% of startup. Look at section 6: transformers");
             out.println("   with many calls but few 'changed' should filter by class name before parsing bytes.");
         }
-        Set<String> seen = new HashSet<>();
-        for (Section s : all) {
-            if (s.isBar && "Loading Resource".equals(s.barTitle) && !seen.add(s.barTitle)) {
-                hints++;
-                out.println(" * Resources were reloaded more than once during startup. Every extra reload re-runs");
-                out.println("   all listeners of section 5 (textures, sounds, fonts...). Find the caller in the tree.");
-                break;
-            }
+        if (countReloads(all) > 1) {
+            hints++;
+            out.println(" * Resources were reloaded more than once during startup. Every extra reload re-runs");
+            out.println("   all listeners of section 5 (textures, sounds, fonts...). Find the caller in the tree.");
         }
         for (Section s : all) {
             if (s.name.startsWith("Texture atlas") && s.durationNanos() > total / 10) {
@@ -349,6 +358,24 @@ final class ReportWriter {
             }
         }
         if (hints == 0) out.println(" Nothing obvious. Start from section 3 and the biggest gaps in section 1.");
+    }
+
+    private static void writeHooks(PrintWriter out) {
+        section(out, "9. Profiler hooks (diagnostics)");
+        out.println(" Hooks that never fired could not be applied in this modpack (see the Mixin log), so the");
+        out.println(" related parts of the report are missing or use the sampled splash bars instead.");
+        out.println();
+        String[] expected = { "Minecraft.startGame", "FML LoadController states", "FML per-mod event handlers",
+            "FML splash bars (sampled)", "Resource reload listeners", "Texture atlases" };
+        for (String h : expected) {
+            Integer n = LoadProfiler.HOOKS.get(h);
+            out.printf(" %-32s %s%n", h, n == null ? "NOT FIRED" : n + " calls");
+        }
+        out.printf(
+            " %-32s %s%n",
+            "Class transformer timing",
+            TransformerProfiler.failure != null ? "FAILED: " + TransformerProfiler.failure
+                : TransformerProfiler.TIMED.size() + " transformers wrapped");
     }
 
     // ---------------------------------------------------------------- csv

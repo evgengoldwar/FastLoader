@@ -10,7 +10,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,9 +47,7 @@ public final class LoadProfiler {
     static final List<Milestone> MILESTONES = new ArrayList<>();
 
     private static final Map<Thread, Deque<Section>> STACKS = new HashMap<>();
-    private static final Map<Object, Section> BARS = new IdentityHashMap<>();
-    private static final Map<Object, Section> BAR_STEPS = new IdentityHashMap<>();
-    private static final Map<Object, Integer> BAR_STEP_INDEX = new IdentityHashMap<>();
+    static final Map<String, Integer> HOOKS = new LinkedHashMap<>();
     private static final Map<String, Section> NAMED = new HashMap<>();
 
     private static boolean initialized;
@@ -95,6 +93,13 @@ public final class LoadProfiler {
                     "FastLoader startup profiler. JVM started %d ms before the FastLoader coremod was loaded.",
                     initMillis - jvmStartMillis));
             live.line("Format: [ms since JVM start] event");
+            try {
+                Runtime.getRuntime()
+                    .addShutdownHook(
+                        new Thread(
+                            () -> finish("JVM exited before loading finished (crash or closed window)"),
+                            "FastLoader-ProfilerShutdown"));
+            } catch (Throwable ignored) {}
         }
         milestone("JVM start", jvmStartMillis);
         milestone("FastLoader coremod loaded");
@@ -165,60 +170,36 @@ public final class LoadProfiler {
         end(s);
     }
 
-    // ---------------------------------------------------------------- FML ProgressManager bars
+    /** Opens a section tagged for the report tables, e.g. kind "mod" with the FML event as tag. */
+    public static Section begin(String name, String kind, String tag) {
+        Section s = begin(name);
+        if (s != null) {
+            s.kind = kind;
+            s.tag = tag;
+        }
+        return s;
+    }
 
-    public static void onBarPush(Object bar, String title, int steps) {
+    // ---------------------------------------------------------------- hook diagnostics
+
+    /** Counts how often each hook fired, so the report shows which ones work in this modpack. */
+    public static void hook(String name) {
         if (!isActive()) return;
         synchronized (LOCK) {
-            // both push() overloads are hooked and one calls the other
-            if (BARS.containsKey(bar)) return;
+            Integer n = HOOKS.get(name);
+            if (n == null) live.line(String.format("[%8d] (hook active: %s)", toJvmMillis(System.nanoTime()), name));
+            HOOKS.put(name, n == null ? 1 : n + 1);
         }
-        Section s = begin(title);
-        if (s == null) return;
-        s.isBar = true;
-        s.barTitle = title;
-        s.barSteps = steps;
-        synchronized (LOCK) {
-            BARS.put(bar, s);
-        }
-        // New transformers may have been registered since the last check
+    }
+
+    /**
+     * Called from the first hooks that run once FML loading is under way: starts the splash bar sampler and times
+     * the class transformers registered so far.
+     */
+    public static void onLoadingStarted() {
+        if (!isActive()) return;
         TransformerProfiler.install();
-    }
-
-    public static void onBarStep(Object bar, int stepIndex, String message) {
-        if (!isActive()) return;
-        long now = System.nanoTime();
-        synchronized (LOCK) {
-            Section barSection = BARS.get(bar);
-            if (barSection == null) return;
-            // both step() overloads are hooked and one calls the other
-            Integer last = BAR_STEP_INDEX.put(bar, stepIndex);
-            if (last != null && last == stepIndex) return;
-            Section prev = BAR_STEPS.remove(bar);
-            if (prev != null) closeUpTo(prev, now);
-            // make sure we nest under the bar even if something left a section open
-            Deque<Section> stack = stack();
-            while (!stack.isEmpty() && stack.peek() != barSection && stack.contains(barSection)) {
-                stack.pop()
-                    .close(now, snapshot());
-            }
-            Section step = barSection.child(message == null ? "<null>" : message);
-            step.open(now, snapshot());
-            if (stack.peek() == barSection) stack.push(step);
-            BAR_STEPS.put(bar, step);
-        }
-    }
-
-    public static void onBarPop(Object bar) {
-        if (!ENABLED || !initialized) return;
-        long now = System.nanoTime();
-        synchronized (LOCK) {
-            BAR_STEP_INDEX.remove(bar);
-            Section step = BAR_STEPS.remove(bar);
-            if (step != null) closeUpTo(step, now);
-            Section s = BARS.remove(bar);
-            if (s != null) closeUpTo(s, now);
-        }
+        ProgressSampler.start();
     }
 
     // ---------------------------------------------------------------- finish
@@ -226,6 +207,7 @@ public final class LoadProfiler {
     /** Ends profiling and writes the report. Only the first call has an effect. */
     public static void finish(String reason) {
         if (!isActive()) return;
+        ProgressSampler.stop();
         milestone(reason);
         long now = System.nanoTime();
         synchronized (LOCK) {
