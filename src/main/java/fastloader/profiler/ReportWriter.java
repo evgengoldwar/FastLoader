@@ -123,6 +123,8 @@ final class ReportWriter {
         writeHints(out, all, total);
         writeHooks(out);
         writeStackProfile(out, total);
+        section(out, "11. FastLoader optimisations");
+        for (String line : fastloader.core.FastLoaderCore.describe()) out.println(" " + line);
     }
 
     private static void writeEnvironment(PrintWriter out) {
@@ -376,6 +378,19 @@ final class ReportWriter {
                     + "). Lower mipmap levels or a faster stitcher help here.");
             }
         }
+        if (hasClass("com.gtnewhorizons.angelica.AngelicaMod")
+            && !hasClass("com.gtnewhorizons.angelica.textures.atlas.AtlasLoadSession")) {
+            hints++;
+            out.println(" * Angelica is older than 2.2.24: newer versions decode textures and build mipmaps on all");
+            out.println("   cores (enableParallelAtlasDecode / enableParallelAtlasMipmaps). Updating saves seconds.");
+        }
+        if (ManagementFactory.getRuntimeMXBean()
+            .getInputArguments()
+            .contains("-XX:+UseZGC")) {
+            hints++;
+            out.println(" * ZGC keeps pauses short in game, but its barriers and background threads cost throughput");
+            out.println("   while loading. Compare a startup with -XX:+UseG1GC (or -XX:+UseParallelGC) in this report.");
+        }
         if (hints == 0) out.println(" Nothing obvious. Start from section 3 and the biggest gaps in section 1.");
     }
 
@@ -441,6 +456,16 @@ final class ReportWriter {
             if (n++ >= limit) break;
             long nanos = e.getValue()[0] * StackSampler.PERIOD_MS * 1_000_000L;
             out.printf(" %9s %5.1f%%  %s%n", "~" + ms(nanos), pct(nanos, total), e.getKey());
+        }
+    }
+
+    /** Checks for a class without loading it. */
+    private static boolean hasClass(String name) {
+        try {
+            return net.minecraft.launchwrapper.Launch.classLoader.findResource(name.replace('.', '/') + ".class")
+                != null;
+        } catch (Throwable t) {
+            return false;
         }
     }
 

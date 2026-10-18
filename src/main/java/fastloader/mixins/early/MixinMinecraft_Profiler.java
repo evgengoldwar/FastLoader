@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import fastloader.core.FastLoaderCore;
 import fastloader.profiler.LoadProfiler;
 
 @Mixin(Minecraft.class)
@@ -67,7 +68,7 @@ public class MixinMinecraft_Profiler {
 
     @Inject(method = "startGame", at = @At("TAIL"))
     private void fastloader$startGameTail(CallbackInfo ci) {
-        LoadProfiler.finish("Main menu ready");
+        FastLoaderCore.onStartupFinished("Main menu ready");
     }
 
     @Inject(method = "refreshResources", at = @At("HEAD"))

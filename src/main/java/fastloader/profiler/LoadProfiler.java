@@ -34,7 +34,7 @@ import net.minecraft.launchwrapper.Launch;
  */
 public final class LoadProfiler {
 
-    public static final boolean ENABLED = !"false".equalsIgnoreCase(System.getProperty("fastloader.profiler"));
+    public static final boolean ENABLED = fastloader.core.FastLoaderConfig.getBoolean("profiler");
     static final long MIN_REPORT_NANOS = Long.getLong("fastloader.profiler.minMs", 20L) * 1_000_000L;
 
     private static final Object LOCK = new Object();

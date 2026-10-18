@@ -3,7 +3,7 @@ package fastloader.mixins;
 import com.gtnewhorizon.gtnhmixins.IEarlyMixinLoader;
 import com.gtnewhorizon.gtnhmixins.builders.IMixins;
 import cpw.mods.fml.relauncher.IFMLLoadingPlugin;
-import fastloader.profiler.LoadProfiler;
+import fastloader.core.FastLoaderCore;
 import net.minecraft.launchwrapper.Launch;
 
 import java.util.List;
@@ -14,9 +14,13 @@ import java.util.Set;
 public class EarlyMixinsLoader implements IFMLLoadingPlugin, IEarlyMixinLoader {
 
     public EarlyMixinsLoader() {
-        // The profiler wraps class transformers, so its own classes must never go through them
-        if (Launch.classLoader != null) Launch.classLoader.addTransformerExclusion("fastloader.profiler.");
-        LoadProfiler.init();
+        // These run inside class loading (transformer timing, prefetch threads), so they must never go through
+        // the transformers themselves
+        if (Launch.classLoader != null) {
+            Launch.classLoader.addTransformerExclusion("fastloader.profiler.");
+            Launch.classLoader.addTransformerExclusion("fastloader.core.");
+        }
+        FastLoaderCore.onCoremodInit();
     }
 
     @Override
@@ -36,7 +40,7 @@ public class EarlyMixinsLoader implements IFMLLoadingPlugin, IEarlyMixinLoader {
 
     @Override
     public void injectData(Map<String, Object> data) {
-        LoadProfiler.milestone("Coremod setup (FastLoader injectData)");
+        fastloader.profiler.LoadProfiler.milestone("Coremod setup (FastLoader injectData)");
     }
 
     @Override

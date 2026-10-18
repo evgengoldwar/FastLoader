@@ -11,6 +11,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerAboutToStartEvent;
 import cpw.mods.fml.common.event.FMLServerStartedEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
+import fastloader.core.FastLoaderCore;
 import fastloader.profiler.LoadProfiler;
 
 @Mod(modid = FastLoader.MODID, version = Tags.VERSION, name = "FastLoader", acceptedMinecraftVersions = "[1.7.10]")
@@ -21,6 +22,10 @@ public class FastLoader {
 
     @SidedProxy(clientSide = "fastloader.ClientProxy", serverSide = "fastloader.CommonProxy")
     public static CommonProxy proxy;
+
+    public FastLoader() {
+        FastLoaderCore.onModConstruct();
+    }
 
     @Mod.EventHandler
     // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the
@@ -57,9 +62,10 @@ public class FastLoader {
 
     @Mod.EventHandler
     public void serverStarted(FMLServerStartedEvent event) {
-        if (LoadProfiler.isActive()) {
+        if (event.getSide()
+            .isServer()) {
             // dedicated server: this is the end of startup
-            LoadProfiler.finish("Server started");
+            FastLoaderCore.onStartupFinished("Server started");
         } else {
             // client: startup was already reported at the main menu, just log how long the world took
             LoadProfiler.note(
