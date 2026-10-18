@@ -86,7 +86,10 @@ public final class ClassPreloader {
                 }
             }
             millis = (System.nanoTime() - start) / 1_000_000L;
-            if (running) status = "done";
+            if (running) {
+                running = false;
+                status = "done";
+            }
         }, "FastLoader-ClassPreload");
         thread.setDaemon(true);
         thread.setPriority(Thread.NORM_PRIORITY - 1);
