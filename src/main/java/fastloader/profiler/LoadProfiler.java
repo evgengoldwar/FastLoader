@@ -26,7 +26,9 @@ import net.minecraft.launchwrapper.Launch;
  * System properties:
  * <ul>
  * <li>{@code -Dfastloader.profiler=false} disables the profiler entirely</li>
- * <li>{@code -Dfastloader.profiler.transformers=false} disables per-transformer timing</li>
+ * <li>{@code -Dfastloader.profiler.transformers=true} wraps class transformers with exact timers (opt-in: some
+ * coremods inspect the transformer list and break when it is changed)</li>
+ * <li>{@code -Dfastloader.profiler.stacks=false} disables the stack sampler</li>
  * <li>{@code -Dfastloader.profiler.minMs=20} hides sections faster than this in the report tree</li>
  * </ul>
  */
@@ -200,6 +202,7 @@ public final class LoadProfiler {
         if (!isActive()) return;
         TransformerProfiler.install();
         ProgressSampler.start();
+        StackSampler.start(Thread.currentThread());
     }
 
     // ---------------------------------------------------------------- finish
@@ -208,6 +211,7 @@ public final class LoadProfiler {
     public static void finish(String reason) {
         if (!isActive()) return;
         ProgressSampler.stop();
+        StackSampler.stop();
         milestone(reason);
         long now = System.nanoTime();
         synchronized (LOCK) {

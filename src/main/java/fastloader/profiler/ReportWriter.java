@@ -122,6 +122,7 @@ final class ReportWriter {
         writeJvm(out, total);
         writeHints(out, all, total);
         writeHooks(out);
+        writeStackProfile(out, total);
     }
 
     private static void writeEnvironment(PrintWriter out) {
@@ -269,7 +270,10 @@ final class ReportWriter {
     private static void writeTransformers(PrintWriter out, long total) {
         section(out, "6. ASM class transformers (coremods)");
         if (!TransformerProfiler.ENABLED) {
-            out.println(" Disabled (-Dfastloader.profiler.transformers=false)");
+            out.println(" Estimated from stack samples of the loading thread (time while a transformer was on the");
+            out.println(" stack). For exact timers start with -Dfastloader.profiler.transformers=true.");
+            out.println();
+            writeSampled(out, StackSampler.TRANSFORMERS, TOP, total);
             return;
         }
         if (TransformerProfiler.failure != null) {
@@ -340,6 +344,14 @@ final class ReportWriter {
         }
         long transformerSum = 0;
         for (Timed t : TransformerProfiler.TIMED) transformerSum += t.nanos.get();
+        synchronized (StackSampler.class) {
+            long loading = StackSampler.classLoadingSamples * StackSampler.PERIOD_MS * 1_000_000L;
+            if (loading > total / 5) {
+                hints++;
+                out.println(" * Class loading took ~" + ms(loading) + " of the loading thread. See sections 6 and 10:");
+                out.println("   expensive transformers, mixin count, and jar reading (a class cache helps here).");
+            }
+        }
         if (transformerSum > total / 10) {
             hints++;
             out.println(" * Class transformers took more than 10% of startup. Look at section 6: transformers");
@@ -374,8 +386,55 @@ final class ReportWriter {
         out.printf(
             " %-32s %s%n",
             "Class transformer timing",
-            TransformerProfiler.failure != null ? "FAILED: " + TransformerProfiler.failure
-                : TransformerProfiler.TIMED.size() + " transformers wrapped");
+            !TransformerProfiler.ENABLED ? "off (opt-in), sampled instead"
+                : TransformerProfiler.failure != null ? "FAILED: " + TransformerProfiler.failure
+                    : TransformerProfiler.TIMED.size() + " transformers wrapped");
+    }
+
+    private static void writeStackProfile(PrintWriter out, long total) {
+        section(out, "10. Sampled profile of the loading thread");
+        if (!StackSampler.ENABLED) {
+            out.println(" Disabled (-Dfastloader.profiler.stacks=false)");
+            return;
+        }
+        synchronized (StackSampler.class) {
+            int n = StackSampler.samples;
+            out.printf(
+                " Thread '%s' sampled every %d ms, %d samples (~%s). Time = samples x interval.%n",
+                StackSampler.targetName,
+                StackSampler.PERIOD_MS,
+                n,
+                ms(n * StackSampler.PERIOD_MS * 1_000_000L));
+            if (n == 0) return;
+            out.printf(
+                " Class loading (incl. reading jars and all transformers): %s (%.1f%% of samples)%n",
+                ms(StackSampler.classLoadingSamples * StackSampler.PERIOD_MS * 1_000_000L),
+                StackSampler.classLoadingSamples * 100.0 / n);
+            out.println();
+            out.println(" Code on the stack, by package (inclusive: a mod calling vanilla counts for both):");
+            writeSampled(out, StackSampler.PACKAGES_INCLUSIVE, TOP, total);
+            out.println();
+            out.println(" Hot spots (first frame outside the JDK; JDK work such as zip/IO is counted to its caller):");
+            writeSampled(out, StackSampler.HOT_METHODS, TOP, total);
+        }
+    }
+
+    private static void writeSampled(PrintWriter out, Map<String, int[]> counts, int limit, long total) {
+        List<Map.Entry<String, int[]>> rows;
+        synchronized (StackSampler.class) {
+            rows = new ArrayList<>(counts.entrySet());
+        }
+        if (rows.isEmpty()) {
+            out.println(" (no samples)");
+            return;
+        }
+        rows.sort((a, b) -> Integer.compare(b.getValue()[0], a.getValue()[0]));
+        int n = 0;
+        for (Map.Entry<String, int[]> e : rows) {
+            if (n++ >= limit) break;
+            long nanos = e.getValue()[0] * StackSampler.PERIOD_MS * 1_000_000L;
+            out.printf(" %9s %5.1f%%  %s%n", "~" + ms(nanos), pct(nanos, total), e.getKey());
+        }
     }
 
     // ---------------------------------------------------------------- csv

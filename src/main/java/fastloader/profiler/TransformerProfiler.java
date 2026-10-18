@@ -19,8 +19,12 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public final class TransformerProfiler {
 
+    /**
+     * Opt-in: replacing entries of the transformer list breaks coremods that look themselves up in it (AE2's
+     * ApiRepairer recursed into itself). The stack sampler covers transformers without touching anything.
+     */
     public static final boolean ENABLED = LoadProfiler.ENABLED
-        && !"false".equalsIgnoreCase(System.getProperty("fastloader.profiler.transformers"));
+        && "true".equalsIgnoreCase(System.getProperty("fastloader.profiler.transformers"));
 
     private static final int SLOWEST_KEPT = 30;
 
@@ -88,6 +92,8 @@ public final class TransformerProfiler {
         final AtomicLong calls = new AtomicLong();
         /** Calls that actually returned different bytes, i.e. classes this transformer modified. */
         final AtomicLong changed = new AtomicLong();
+        /** Class this transformer is currently transforming on this thread. */
+        private final ThreadLocal<String> current = new ThreadLocal<>();
 
         Timed(IClassTransformer delegate) {
             this.delegate = delegate;
@@ -97,12 +103,20 @@ public final class TransformerProfiler {
 
         @Override
         public byte[] transform(String name, String transformedName, byte[] basicClass) {
+            String outer = current.get();
+            if (transformedName != null && transformedName.equals(outer)) {
+                // The delegate walks the transformer list itself and normally skips its own entry, but cannot
+                // recognise it behind this wrapper: behave as that skipped entry.
+                return basicClass;
+            }
+            current.set(transformedName);
             long start = System.nanoTime();
             try {
                 byte[] result = delegate.transform(name, transformedName, basicClass);
                 if (result != basicClass) changed.incrementAndGet();
                 return result;
             } finally {
+                current.set(outer);
                 long d = System.nanoTime() - start;
                 nanos.addAndGet(d);
                 calls.incrementAndGet();
