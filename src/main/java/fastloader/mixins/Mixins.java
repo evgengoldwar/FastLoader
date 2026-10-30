@@ -33,14 +33,19 @@ public enum Mixins implements IMixins {
             "minecraft.MixinSpawnerAnimals",
             "minecraft.MixinWorldGenLakes",
             "minecraft.MixinWorldGenDungeons",
-            "minecraft.MixinWorldGenMinable")),
+            "minecraft.MixinWorldGenMinable",
+            "minecraft.MixinWorldGenLiquids")),
     PROFILER_PLAYERS(new MixinBuilder("Chunk pipeline profiler: player chunk loading / sending")
         .setPhase(Phase.EARLY)
         .addCommonMixins("minecraft.MixinPlayerManager", "minecraft.MixinS21PacketChunkData")),
     PROFILER_GREGTECH(new MixinBuilder("Chunk pipeline profiler: GregTech oregen")
         .setPhase(Phase.LATE)
         .addRequiredMod(TargetMods.GREGTECH)
-        .addCommonMixins("gregtech.MixinGTWorldGenContainer", "gregtech.MixinGTWorldgenNamed"));
+        .addCommonMixins("gregtech.MixinGTWorldGenContainer", "gregtech.MixinGTWorldgenNamed")),
+    PROFILER_RWG(new MixinBuilder("Chunk pipeline profiler: Realistic World Gen internals")
+        .setPhase(Phase.LATE)
+        .addRequiredMod(TargetMods.RWG)
+        .addCommonMixins("rwg.MixinChunkGeneratorRealistic"));
 
     private final MixinBuilder builder;
 

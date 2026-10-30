@@ -37,7 +37,12 @@ public enum Section {
     LIGHT_INIT("Chunk.func_150809_p (initial light population)", 0),
     SKYLIGHT("Chunk.generateSkylightMap", 0),
     LIGHT_CHECK("Chunk.func_150804_b (chunk light/gap checks)", 0),
-    LIGHT_UPDATE("World.updateLightByType", 0),
+    /** Counter only: every light update inside chunk work (timing each call would distort the result). */
+    LIGHT_UPDATE("World.updateLightByType (count)", Flags.COUNTER),
+    /** Every 32nd light update, timed; used to estimate the total light cost. */
+    LIGHT_SAMPLE("World.updateLightByType (sampled 1/" + 32 + ")", 0),
+    /** Counter only: World.setBlock calls inside chunk work. */
+    SET_BLOCK("World.setBlock (count)", Flags.COUNTER),
 
     // ---- terrain internals (vanilla generators + any mod generator built on them) ----
     TERRAIN_NOISE("ChunkProviderGenerate.func_147424_a (noise terrain)", 0),
@@ -49,6 +54,7 @@ public enum Section {
     VANILLA_ORES("BiomeDecorator.generateOres", Flags.ATTRIBUTABLE),
     LAKES("WorldGenLakes", Flags.ATTRIBUTABLE),
     DUNGEONS("WorldGenDungeons", Flags.ATTRIBUTABLE),
+    LIQUIDS("WorldGenLiquids (springs)", Flags.ATTRIBUTABLE),
     MINABLE("WorldGenMinable (ore blob)", Flags.ATTRIBUTABLE),
     WORLDGEN_SPAWN("SpawnerAnimals.performWorldGenSpawning", Flags.ATTRIBUTABLE),
 
@@ -63,6 +69,12 @@ public enum Section {
     GT_VEIN("GT vein", Flags.ATTRIBUTABLE),
     GT_STONE("GT stone", Flags.ATTRIBUTABLE),
     GT_SMALL_ORE("GT small ore", Flags.ATTRIBUTABLE),
+
+    // ---- Realistic World Gen ----
+    RWG_TERRAIN("RWG generateTerrain (height noise)", 0),
+    RWG_MAPGEN("RWG RealisticBiomeBase.generateMapGen (per-biome mapgen)", Flags.ATTRIBUTABLE),
+    RWG_SURFACE("RWG replaceBlocksForBiome (surface)", 0),
+    RWG_DECORATE("RWG RealisticBiomeBase.rDecorate (biome decorators)", Flags.ATTRIBUTABLE),
 
     // ---- FastLoader itself ----
     PREGEN("FastLoader pregenerator batch", 0);
@@ -83,6 +95,10 @@ public enum Section {
         return (flags & Flags.POPULATE_BOUNDARY) != 0;
     }
 
+    boolean isCounter() {
+        return (flags & Flags.COUNTER) != 0;
+    }
+
     boolean isAttributable() {
         return (flags & Flags.ATTRIBUTABLE) != 0;
     }
@@ -92,5 +108,6 @@ public enum Section {
         static final int LOAD = 1;
         static final int POPULATE_BOUNDARY = 2;
         static final int ATTRIBUTABLE = 4;
+        static final int COUNTER = 8;
     }
 }

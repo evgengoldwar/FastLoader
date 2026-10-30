@@ -18,8 +18,9 @@ import fastloader.profiler.Section;
 
 /**
  * Simple square-spiral pregenerator, mainly used as a reproducible benchmark for the chunk profiler. It spends at most
- * {@link #tickBudgetNs} per server tick and unloads rings it no longer needs (two rings behind the edge, so every chunk
- * gets populated before it is unloaded).
+ * {@link #tickBudgetNs} per server tick and unloads rings it no longer needs. Rings are kept {@link #KEEP_RINGS} behind
+ * the edge: one ring is needed for population, the extra ones keep chunks that neighbour generators (Roguelike,
+ * Et Futurum...) read from being unloaded and loaded again.
  */
 public final class ChunkPregenerator {
 
@@ -27,6 +28,7 @@ public final class ChunkPregenerator {
 
     public static volatile long tickBudgetNs = 35_000_000L;
     public static volatile long progressIntervalNs = 10_000_000_000L;
+    private static final int KEEP_RINGS = 3;
 
     private Job job;
 
@@ -118,9 +120,7 @@ public final class ChunkPregenerator {
             long deadline = System.nanoTime() + tickBudgetNs;
             while (System.nanoTime() < deadline) {
                 if (ring > radius) {
-                    // unload the last two rings
-                    unloadRing(world, ring - 1);
-                    unloadRing(world, ring - 2);
+                    for (int r = 1; r <= KEEP_RINGS; r++) unloadRing(world, ring - r);
                     return true;
                 }
                 int ringSize = ring == 0 ? 1 : 8 * ring;
@@ -129,7 +129,7 @@ public final class ChunkPregenerator {
                 done++;
                 if (++index >= ringSize) {
                     index = 0;
-                    if (ring >= 2) unloadRing(world, ring - 2);
+                    if (ring >= KEEP_RINGS) unloadRing(world, ring - KEEP_RINGS);
                     ring++;
                 }
             }

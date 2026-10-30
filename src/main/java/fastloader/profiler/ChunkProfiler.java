@@ -28,6 +28,8 @@ public final class ChunkProfiler {
     // ---------------------------------------------------------------- settings (see Config)
     public static volatile boolean enabled = true;
     public static volatile boolean profileLighting = true;
+    public static volatile boolean countSetBlock = true;
+    static final int LIGHT_SAMPLE_RATE = 32;
     public static volatile boolean profileEvents = true;
     public static volatile long slowChunkNs = 50_000_000L;
     public static volatile long slowTickNs = 50_000_000L;
@@ -100,6 +102,33 @@ public final class ChunkProfiler {
 
     public static void pushChunk(Section s, String key, int dim, int x, int z) {
         if (enabled) push0(s, key, true, dim, x, z);
+    }
+
+    /**
+     * Counts a very frequent call against the running section without timing it (two nanoTime calls per light
+     * update would cost more than many of the updates themselves).
+     */
+    public static void count(Section s) {
+        if (!enabled) return;
+        ThreadState st = TL.get();
+        if (st == null || st.depth == 0 || st.hardEpoch != hardEpoch) return;
+        ProfileNode n = st.stack[st.depth - 1].node;
+        if (n != null) n.child(s, s.label).count++;
+    }
+
+    /**
+     * Light update entry: always counted, every {@link #LIGHT_SAMPLE_RATE}th call inside chunk work is timed.
+     * @return true if a sample frame was pushed (the caller must pop {@link Section#LIGHT_SAMPLE})
+     */
+    public static boolean lightUpdate() {
+        if (!enabled) return false;
+        ThreadState st = TL.get();
+        if (st == null || st.depth == 0 || st.hardEpoch != hardEpoch) return false;
+        ProfileNode n = st.stack[st.depth - 1].node;
+        if (n != null) n.child(Section.LIGHT_UPDATE, Section.LIGHT_UPDATE.label).count++;
+        if (++st.lightCalls % LIGHT_SAMPLE_RATE != 0) return false;
+        push0(Section.LIGHT_SAMPLE, Section.LIGHT_SAMPLE.label, false, 0, 0, 0);
+        return true;
     }
 
     /** Ends the most recent frame of the given section (unwinding frames left behind by exceptions). */
@@ -562,6 +591,7 @@ public final class ChunkProfiler {
         Frame[] stack = new Frame[32];
         int depth;
         int detailFrames;
+        int lightCalls;
 
         ThreadState(Thread thread) {
             this.thread = thread;

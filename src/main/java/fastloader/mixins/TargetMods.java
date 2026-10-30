@@ -7,7 +7,8 @@ import com.gtnewhorizon.gtnhmixins.builders.TargetModBuilder;
 
 public enum TargetMods implements ITargetMod {
 
-    GREGTECH(null, "gregtech");
+    GREGTECH(null, "gregtech"),
+    RWG(null, "RWG");
 
     private final TargetModBuilder builder;
 

@@ -197,6 +197,18 @@ public final class ProfileReport {
                 Section.GT_STONE,
                 Section.GT_SMALL_ORE);
 
+            appendCategory(
+                sb,
+                flats,
+                rootTotal,
+                "Realistic World Gen internals:",
+                Section.RWG_TERRAIN,
+                Section.RWG_MAPGEN,
+                Section.RWG_SURFACE,
+                Section.RWG_DECORATE,
+                Section.LIQUIDS);
+            appendCounters(sb, flats);
+
             if (withTree) {
                 line(sb, "Call tree (total ms | self ms | calls | avg ms | max ms):");
                 appendTree(sb, root, rootTotal, 0);
@@ -224,6 +236,54 @@ public final class ProfileReport {
         for (int i = 0; i < Math.min(topEntries, list.size()); i++) row(sb, list.get(i), rootTotal);
     }
 
+    private static void appendCounters(StringBuilder sb, List<Flat> flats) {
+        long lights = 0, blocks = 0, sampleNs = 0, samples = 0;
+        List<Flat> list = new ArrayList<>();
+        for (Flat f : flats) {
+            lights += f.lightUpdates;
+            blocks += f.setBlocks;
+            if (f.section == Section.LIGHT_SAMPLE) {
+                sampleNs += f.total;
+                samples += f.count;
+            }
+            if (f.setBlocks > 0 || f.lightUpdates > 0) list.add(f);
+        }
+        if (list.isEmpty()) return;
+        double perLightMs = samples == 0 ? 0 : sampleNs / 1e6 / samples;
+        line(
+            sb,
+            "Block writes and light updates (counted, not timed): setBlock %d, light updates %d, estimated light time %.1f ms (%.4f ms per update, %d samples)",
+            blocks,
+            lights,
+            lights * perLightMs,
+            perLightMs,
+            samples);
+        list.sort((a, b) -> Long.compare(b.setBlocks + b.lightUpdates, a.setBlocks + a.lightUpdates));
+        line(
+            sb,
+            "    %10s %9s %11s %10s %11s %9s  %s",
+            "setBlock",
+            "per call",
+            "light upd",
+            "per call",
+            "est. light",
+            "calls",
+            "section (direct calls only)");
+        for (int i = 0; i < Math.min(topEntries, list.size()); i++) {
+            Flat f = list.get(i);
+            line(
+                sb,
+                "    %10d %9.1f %11d %10.1f %8.1f ms %9d  %s",
+                f.setBlocks,
+                f.count == 0 ? 0 : (double) f.setBlocks / f.count,
+                f.lightUpdates,
+                f.count == 0 ? 0 : (double) f.lightUpdates / f.count,
+                f.lightUpdates * perLightMs,
+                f.count,
+                f.key);
+        }
+    }
+
     private static void header(StringBuilder sb) {
         line(sb, "    %10s %10s %6s %9s %9s %9s  %s", "total ms", "self ms", "self%", "calls", "avg ms", "max ms", "section");
     }
@@ -243,7 +303,9 @@ public final class ProfileReport {
 
     private static void appendTree(StringBuilder sb, ProfileNode node, long rootTotal, int depth) {
         List<ProfileNode> kids = new ArrayList<>();
-        for (ProfileNode c : node.children) kids.add(c);
+        for (ProfileNode c : node.children) {
+            if (c.section == null || !c.section.isCounter()) kids.add(c);
+        }
         kids.sort((a, b) -> Long.compare(b.totalNs, a.totalNs));
         int shown = 0;
         long hiddenNs = 0;
@@ -259,14 +321,15 @@ public final class ProfileReport {
             for (int i = 0; i < depth; i++) indent.append("  ");
             line(
                 sb,
-                "%s- %.1f | %.1f | %d | %.3f | %.2f  %s",
+                "%s- %.1f | %.1f | %d | %.3f | %.2f  %s%s",
                 indent,
                 c.totalNs / 1e6,
                 c.selfNs / 1e6,
                 c.count,
                 c.count == 0 ? 0 : c.totalNs / 1e6 / c.count,
                 c.maxNs / 1e6,
-                c.key);
+                c.key,
+                counters(c));
             appendTree(sb, c, rootTotal, depth + 1);
         }
         if (hidden > 0) {
@@ -274,6 +337,16 @@ public final class ProfileReport {
             for (int i = 0; i < depth; i++) indent.append("  ");
             line(sb, "%s- %.1f ms in %d smaller entries", indent, hiddenNs / 1e6, hidden);
         }
+    }
+
+    private static String counters(ProfileNode n) {
+        long blocks = 0, lights = 0;
+        for (ProfileNode c : n.children) {
+            if (c.section == Section.SET_BLOCK) blocks += c.count;
+            else if (c.section == Section.LIGHT_UPDATE) lights += c.count;
+        }
+        if (blocks == 0 && lights == 0) return "";
+        return "  {setBlock " + blocks + ", light " + lights + "}";
     }
 
     private static void appendWorldState(StringBuilder sb) {
@@ -329,6 +402,8 @@ public final class ProfileReport {
         final Section section;
         final String key;
         long count, total, self, max;
+        /** direct counter children */
+        long setBlocks, lightUpdates;
 
         Flat(Section section, String key) {
             this.section = section;
@@ -339,6 +414,7 @@ public final class ProfileReport {
     /** Sums nodes with the same key. Inclusive time is only taken from the outermost occurrence on a path. */
     private static void flatten(ProfileNode node, Map<String, Flat> out, Set<String> onPath) {
         for (ProfileNode c : node.children) {
+            if (c.section != null && c.section.isCounter()) continue;
             Flat f = out.get(c.key);
             if (f == null) {
                 f = new Flat(c.section, c.key);
@@ -346,6 +422,10 @@ public final class ProfileReport {
             }
             f.count += c.count;
             f.self += c.selfNs;
+            for (ProfileNode cc : c.children) {
+                if (cc.section == Section.SET_BLOCK) f.setBlocks += cc.count;
+                else if (cc.section == Section.LIGHT_UPDATE) f.lightUpdates += cc.count;
+            }
             if (c.maxNs > f.max) f.max = c.maxNs;
             boolean outer = onPath.add(c.key);
             if (outer) f.total += c.totalNs;

@@ -28,7 +28,12 @@ public class Config {
             "profileLighting",
             PROFILER,
             true,
-            "Time World.updateLightByType calls that happen inside chunk work (cheap, but called very often).");
+            "Count World.updateLightByType calls inside chunk work and time 1 of every 32 to estimate their cost.");
+        ChunkProfiler.countSetBlock = configuration.getBoolean(
+            "countSetBlock",
+            PROFILER,
+            true,
+            "Count World.setBlock calls inside chunk work per section (shows which generator places how many blocks).");
         ChunkProfiler.profileEvents = configuration.getBoolean(
             "profileEventListeners",
             PROFILER,
