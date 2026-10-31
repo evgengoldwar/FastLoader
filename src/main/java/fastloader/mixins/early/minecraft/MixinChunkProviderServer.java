@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import fastloader.optimize.FastWorldgenWrites;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Keys;
 import fastloader.profiler.Section;
@@ -145,11 +146,13 @@ public abstract class MixinChunkProviderServer {
 
     @Inject(method = "populate", at = @At("HEAD"), require = 0)
     private void fastloader$populateHead(IChunkProvider provider, int x, int z, CallbackInfo ci) {
+        FastWorldgenWrites.populateDepth++;
         ChunkProfiler.pushChunk(Section.POPULATE, worldObj.provider.dimensionId, x, z);
     }
 
     @Inject(method = "populate", at = @At("RETURN"), require = 0)
     private void fastloader$populateReturn(IChunkProvider provider, int x, int z, CallbackInfo ci) {
+        if (FastWorldgenWrites.populateDepth > 0) FastWorldgenWrites.populateDepth--;
         ChunkProfiler.pop(Section.POPULATE);
     }
 

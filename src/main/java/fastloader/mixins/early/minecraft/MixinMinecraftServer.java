@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import fastloader.optimize.FastWorldgenWrites;
 import fastloader.optimize.TerrainPrefetcher;
 import fastloader.profiler.ChunkProfiler;
 
@@ -15,6 +16,8 @@ public class MixinMinecraftServer {
 
     @Inject(method = "tick", at = @At("HEAD"), require = 0)
     private void fastloader$tickStart(CallbackInfo ci) {
+        // a populate that threw last tick never decremented the depth
+        FastWorldgenWrites.populateDepth = 0;
         ChunkProfiler.onServerTickStart();
     }
 

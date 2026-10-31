@@ -295,12 +295,13 @@ public final class ProfileReport {
     }
 
     private static void appendCounters(StringBuilder sb, List<Flat> flats, long rootTotal) {
-        long lights = 0, blocks = 0, ticks = 0, lightNs = 0, lightSamples = 0, blockNs = 0, blockSamples = 0;
+        long lights = 0, blocks = 0, ticks = 0, lightNs = 0, lightSamples = 0, blockNs = 0, blockSamples = 0, fast = 0;
         List<Flat> list = new ArrayList<>();
         for (Flat f : flats) {
             lights += f.lightUpdates;
             blocks += f.setBlocks;
             ticks += f.scheduledTicks;
+            fast += f.fastWrites;
             if (f.section == Section.LIGHT_SAMPLE) {
                 lightNs += f.total;
                 lightSamples += f.count;
@@ -308,7 +309,7 @@ public final class ProfileReport {
                 blockNs += f.total;
                 blockSamples += f.count;
             }
-            if (f.setBlocks > 0 || f.lightUpdates > 0 || f.scheduledTicks > 0) list.add(f);
+            if (f.setBlocks > 0 || f.lightUpdates > 0 || f.scheduledTicks > 0 || f.fastWrites > 0) list.add(f);
         }
         if (list.isEmpty()) return;
         double perLightNs = lightSamples == 0 ? 0 : (double) lightNs / lightSamples;
@@ -323,16 +324,22 @@ public final class ProfileReport {
             rootTotal == 0 ? 0 : blocks * perBlockNs * 100 / rootTotal);
         line(
             sb,
+            "Worldgen fast path (optimizations.fastWorldgenWrites): %d writes stored directly, %.1f%% of all worldgen block writes",
+            fast,
+            fast + blocks == 0 ? 0 : fast * 100.0 / (fast + blocks));
+        line(
+            sb,
             "Light updates (estimated from 1/%d timed samples): %d x %.0f ns = %.1f ms | block ticks scheduled by worldgen: %d",
             ChunkProfiler.LIGHT_SAMPLE_RATE,
             lights,
             perLightNs,
             lights * perLightNs / 1e6,
             ticks);
-        list.sort((a, b) -> Long.compare(b.setBlocks, a.setBlocks));
+        list.sort((a, b) -> Long.compare(b.setBlocks + b.fastWrites, a.setBlocks + a.fastWrites));
         line(
             sb,
-            "    %10s %8s %10s %10s %8s %10s %9s  %s",
+            "    %10s %10s %8s %10s %10s %8s %10s %9s  %s",
+            "fast path",
             "setBlock",
             "per call",
             "est. ms",
@@ -345,7 +352,8 @@ public final class ProfileReport {
             Flat f = list.get(i);
             line(
                 sb,
-                "    %10d %8.1f %10.1f %10d %8.1f %10d %9d  %s",
+                "    %10d %10d %8.1f %10.1f %10d %8.1f %10d %9d  %s",
+                f.fastWrites,
                 f.setBlocks,
                 f.count == 0 ? 0 : (double) f.setBlocks / f.count,
                 f.setBlocks * perBlockNs / 1e6,
@@ -422,14 +430,20 @@ public final class ProfileReport {
     }
 
     private static String counters(ProfileNode n) {
-        long blocks = 0, lights = 0, ticks = 0;
+        long blocks = 0, lights = 0, ticks = 0, fast = 0;
         for (ProfileNode c : n.children) {
             if (c.section == Section.SET_BLOCK) blocks += c.count;
             else if (c.section == Section.LIGHT_UPDATE) lights += c.count;
             else if (c.section == Section.SCHEDULED_TICK) ticks += c.count;
+            else if (c.section == Section.FAST_SET_BLOCK) fast += c.count;
         }
-        if (blocks == 0 && lights == 0 && ticks == 0) return "";
-        return "  {setBlock " + blocks + ", light " + lights + (ticks > 0 ? ", scheduled ticks " + ticks : "") + "}";
+        if (blocks == 0 && lights == 0 && ticks == 0 && fast == 0) return "";
+        return "  {setBlock " + blocks
+            + (fast > 0 ? ", fast path " + fast : "")
+            + ", light "
+            + lights
+            + (ticks > 0 ? ", scheduled ticks " + ticks : "")
+            + "}";
     }
 
     private static void appendWorldState(StringBuilder sb) {
@@ -487,7 +501,7 @@ public final class ProfileReport {
         final String key;
         long count, total, self, max;
         /** direct counter children */
-        long setBlocks, lightUpdates, scheduledTicks;
+        long setBlocks, lightUpdates, scheduledTicks, fastWrites;
 
         Flat(Section section, String key) {
             this.section = section;
@@ -510,6 +524,7 @@ public final class ProfileReport {
                 if (cc.section == Section.SET_BLOCK) f.setBlocks += cc.count;
                 else if (cc.section == Section.LIGHT_UPDATE) f.lightUpdates += cc.count;
                 else if (cc.section == Section.SCHEDULED_TICK) f.scheduledTicks += cc.count;
+                else if (cc.section == Section.FAST_SET_BLOCK) f.fastWrites += cc.count;
             }
             if (c.maxNs > f.max) f.max = c.maxNs;
             boolean outer = onPath.add(c.key);

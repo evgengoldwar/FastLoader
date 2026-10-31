@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import fastloader.optimize.FastWorldgenWrites;
 import fastloader.optimize.TerrainPrefetcher;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Section;
@@ -43,9 +44,14 @@ public class MixinWorld {
         }
     }
 
-    @Inject(method = "setBlock(IIILnet/minecraft/block/Block;II)Z", at = @At("HEAD"), require = 0)
+    @Inject(method = "setBlock(IIILnet/minecraft/block/Block;II)Z", at = @At("HEAD"), cancellable = true, require = 0)
     private void fastloader$setBlockHead(int x, int y, int z, Block block, int meta, int flags,
         CallbackInfoReturnable<Boolean> cir) {
+        if (FastWorldgenWrites.tryWrite((World) (Object) this, x, y, z, block, meta, flags)) {
+            ChunkProfiler.count(Section.FAST_SET_BLOCK);
+            cir.setReturnValue(true);
+            return;
+        }
         ChunkProfiler.setBlockEnter();
     }
 

@@ -5,6 +5,7 @@ import java.io.File;
 import net.minecraftforge.common.config.Configuration;
 
 import fastloader.optimize.ChunkLookupCache;
+import fastloader.optimize.FastWorldgenWrites;
 import fastloader.optimize.HodgepodgeTuning;
 import fastloader.optimize.TerrainPrefetcher;
 import fastloader.pregen.ChunkPregenerator;
@@ -153,6 +154,11 @@ public class Config {
                     new String[] { "rwg.world.ChunkGeneratorRealistic" },
                     "Chunk generator classes whose terrain may be generated on background threads. They must re-seed per chunk and keep their state in the generator instance. Vanilla generators are NOT safe (GenLayer uses a static IntCache).")));
 
+        FastWorldgenWrites.enabled = configuration.getBoolean(
+            "fastWorldgenWrites",
+            OPTIMIZATIONS,
+            true,
+            "During chunk population, store 'opaque block replaces opaque block' writes (stone -> dirt, gravel, ores, bedrock...) directly in chunks the client does not have yet. For these writes the full setBlock only stores the block anyway: no light, heightmap, client or neighbour change. Blocks with tile entities, falling blocks and blocks with custom add/break logic always use the full setBlock.");
         HodgepodgeTuning.enabled = configuration.getBoolean(
             "hodgepodgeTuning",
             OPTIMIZATIONS,
@@ -166,12 +172,12 @@ public class Config {
             20,
             "Value for Hodgepodge's maxChunkGenPerPlayerPerTick.");
         HodgepodgeTuning.chunkGenBudgetMs = configuration.getInt(
-            "hodgepodgeChunkGenBudgetMs",
+            "hodgepodgeTickBudgetMs",
             OPTIMIZATIONS,
-            40,
+            30,
             0,
             50,
-            "Value for Hodgepodge's chunkGenBudgetMs (generation only uses what is left of the 50 ms tick).");
+            "Value for Hodgepodge's chunkGenBudgetMs. Hodgepodge does not count the rest of the tick (entities, block ticks), so values above ~30 can push ticks past 50 ms.");
         HodgepodgeTuning.forcePopulateAgeTicks = configuration.getInt(
             "hodgepodgeForcePopulateAgeTicks",
             OPTIMIZATIONS,

@@ -43,6 +43,8 @@ public enum Section {
     LIGHT_SAMPLE("World.updateLightByType (sampled 1/" + 32 + ")", 0),
     /** Counter only: World.setBlock calls inside chunk work. */
     SET_BLOCK("World.setBlock (count)", Flags.COUNTER),
+    /** Counter only: worldgen writes handled by FastWorldgenWrites instead of the full setBlock. */
+    FAST_SET_BLOCK("World.setBlock fast path (count)", Flags.COUNTER),
     /** Every 64th World.setBlock inside chunk work, timed, with its internals below. */
     SET_BLOCK_SAMPLE("World.setBlock (sampled 1/" + 64 + ")", Flags.SAMPLE),
     SB_CHUNK("Chunk.func_150807_a (store block, heightmap, onBlockAdded)", Flags.SAMPLE),

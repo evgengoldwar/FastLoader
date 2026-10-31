@@ -16,7 +16,7 @@ public final class HodgepodgeTuning {
 
     public static volatile boolean enabled = true;
     public static volatile int maxChunkGenPerPlayerPerTick = 10;
-    public static volatile int chunkGenBudgetMs = 40;
+    public static volatile int chunkGenBudgetMs = 30;
     public static volatile int forcePopulateAgeTicks = 20;
 
     private static final String CONFIG_CLASS = "com.mitchej123.hodgepodge.config.SpeedupsConfig";
