@@ -43,6 +43,14 @@ public enum Section {
     LIGHT_SAMPLE("World.updateLightByType (sampled 1/" + 32 + ")", 0),
     /** Counter only: World.setBlock calls inside chunk work. */
     SET_BLOCK("World.setBlock (count)", Flags.COUNTER),
+    /** Every 64th World.setBlock inside chunk work, timed, with its internals below. */
+    SET_BLOCK_SAMPLE("World.setBlock (sampled 1/" + 64 + ")", Flags.SAMPLE),
+    SB_CHUNK("Chunk.func_150807_a (store block, heightmap, onBlockAdded)", Flags.SAMPLE),
+    SB_RELIGHT("Chunk.relightBlock (sky light column after heightmap change)", Flags.SAMPLE),
+    SB_LIGHT("World.func_147451_t (light check after setBlock)", Flags.SAMPLE),
+    SB_NOTIFY("World.markAndNotifyBlock (client sync + neighbour updates)", Flags.SAMPLE),
+    /** Counter only: block ticks scheduled by worldgen (falling gravel/sand, liquids...). */
+    SCHEDULED_TICK("WorldServer.scheduleBlockUpdate (count)", Flags.COUNTER),
 
     // ---- terrain internals (vanilla generators + any mod generator built on them) ----
     TERRAIN_NOISE("ChunkProviderGenerate.func_147424_a (noise terrain)", 0),
@@ -95,6 +103,10 @@ public enum Section {
         return (flags & Flags.POPULATE_BOUNDARY) != 0;
     }
 
+    boolean isSample() {
+        return (flags & Flags.SAMPLE) != 0;
+    }
+
     boolean isCounter() {
         return (flags & Flags.COUNTER) != 0;
     }
@@ -109,5 +121,6 @@ public enum Section {
         static final int POPULATE_BOUNDARY = 2;
         static final int ATTRIBUTABLE = 4;
         static final int COUNTER = 8;
+        static final int SAMPLE = 16;
     }
 }

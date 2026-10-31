@@ -1,5 +1,6 @@
 package fastloader.mixins.early.minecraft;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.WorldServer;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import fastloader.profiler.ChunkProfiler;
+import fastloader.profiler.Section;
 
 /** World level timings, only used to explain slow ticks (not part of the chunk call tree). */
 @Mixin(WorldServer.class)
@@ -54,5 +56,11 @@ public class MixinWorldServer {
     @Inject(method = "func_147456_g", at = @At("RETURN"), require = 0)
     private void fastloader$blocksReturn(CallbackInfo ci) {
         ChunkProfiler.addTickTime(fastloader$dim(), 2, System.nanoTime() - fastloader$blocksStart);
+    }
+
+    /** Block ticks scheduled by worldgen (falling gravel/sand, flowing liquids...), counted per section. */
+    @Inject(method = "scheduleBlockUpdateWithPriority", at = @At("HEAD"), require = 0)
+    private void fastloader$scheduledTick(int x, int y, int z, Block block, int delay, int priority, CallbackInfo ci) {
+        ChunkProfiler.count(Section.SCHEDULED_TICK);
     }
 }

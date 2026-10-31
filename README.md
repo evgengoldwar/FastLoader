@@ -21,7 +21,7 @@
 | Спавн мобов при генерации | `SpawnerAnimals.performWorldGenSpawning` |
 | Слушатели событий | каждый `@SubscribeEvent`, вызванный внутри работы с чанками (`ChunkEvent.Load`, `PopulateChunkEvent`, `DecorateBiomeEvent`, `OreGenEvent`, GT `VeinGenerateEvent`...), с id мода |
 | Освещение | `Chunk.func_150809_p` (первичный свет), `generateSkylightMap`, `func_150804_b`; `World.updateLightByType` — считается каждый вызов, замеряется 1 из 32 (оценка стоимости без искажения) |
-| Запись блоков | `World.setBlock` — счётчик по секциям: какой генератор ставит сколько блоков |
+| Запись блоков | `World.setBlock` — счётчик по секциям (какой генератор ставит сколько блоков), 1 из 64 вызовов замеряется вместе с внутренностями: `Chunk.func_150807_a`, `relightBlock`, проверка света, `markAndNotifyBlock`; плюс счётчик запланированных тиков блоков |
 | **RWG** | `generateTerrain` (шум высот), `generateMapGen` по биомам, `replaceBlocksForBiome`, `rDecorate` (декораторы биомов), `WorldGenLiquids` |
 | Диск / NBT | `AnvilChunkLoader.loadChunk__Async`, `readChunkFromNBT`, `loadEntities`, `saveChunk`, `writeNextIO` (поток File IO), ChunkIO stage2 |
 | Выгрузка/сохранение | `unloadQueuedChunks`, `safeSaveChunk`, `saveChunks`, `Chunk.onChunkUnload` |

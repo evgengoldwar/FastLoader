@@ -213,7 +213,18 @@ public final class ProfileReport {
                 Section.RWG_SURFACE,
                 Section.RWG_DECORATE,
                 Section.LIQUIDS);
-            appendCounters(sb, flats);
+            appendCategory(
+                sb,
+                flats,
+                rootTotal,
+                "Inside World.setBlock (only the sampled calls, multiply by " + ChunkProfiler.SET_BLOCK_SAMPLE_RATE + " for the real total):",
+                Section.SET_BLOCK_SAMPLE,
+                Section.SB_CHUNK,
+                Section.SB_RELIGHT,
+                Section.SB_LIGHT,
+                Section.SB_NOTIFY,
+                Section.LIGHT_SAMPLE);
+            appendCounters(sb, flats, rootTotal);
 
             if (withTree) {
                 line(sb, "Call tree (total ms | self ms | calls | avg ms | max ms):");
@@ -242,49 +253,64 @@ public final class ProfileReport {
         for (int i = 0; i < Math.min(topEntries, list.size()); i++) row(sb, list.get(i), rootTotal);
     }
 
-    private static void appendCounters(StringBuilder sb, List<Flat> flats) {
-        long lights = 0, blocks = 0, sampleNs = 0, samples = 0;
+    private static void appendCounters(StringBuilder sb, List<Flat> flats, long rootTotal) {
+        long lights = 0, blocks = 0, ticks = 0, lightNs = 0, lightSamples = 0, blockNs = 0, blockSamples = 0;
         List<Flat> list = new ArrayList<>();
         for (Flat f : flats) {
             lights += f.lightUpdates;
             blocks += f.setBlocks;
+            ticks += f.scheduledTicks;
             if (f.section == Section.LIGHT_SAMPLE) {
-                sampleNs += f.total;
-                samples += f.count;
+                lightNs += f.total;
+                lightSamples += f.count;
+            } else if (f.section == Section.SET_BLOCK_SAMPLE) {
+                blockNs += f.total;
+                blockSamples += f.count;
             }
-            if (f.setBlocks > 0 || f.lightUpdates > 0) list.add(f);
+            if (f.setBlocks > 0 || f.lightUpdates > 0 || f.scheduledTicks > 0) list.add(f);
         }
         if (list.isEmpty()) return;
-        double perLightMs = samples == 0 ? 0 : sampleNs / 1e6 / samples;
+        double perLightNs = lightSamples == 0 ? 0 : (double) lightNs / lightSamples;
+        double perBlockNs = blockSamples == 0 ? 0 : (double) blockNs / blockSamples;
         line(
             sb,
-            "Block writes and light updates (counted, not timed): setBlock %d, light updates %d, estimated light time %.1f ms (%.4f ms per update, %d samples)",
+            "Block writes (estimated from 1/%d timed samples): setBlock %d x %.0f ns = %.1f ms (%.1f%% of profiled time)",
+            ChunkProfiler.SET_BLOCK_SAMPLE_RATE,
             blocks,
-            lights,
-            lights * perLightMs,
-            perLightMs,
-            samples);
-        list.sort((a, b) -> Long.compare(b.setBlocks + b.lightUpdates, a.setBlocks + a.lightUpdates));
+            perBlockNs,
+            blocks * perBlockNs / 1e6,
+            rootTotal == 0 ? 0 : blocks * perBlockNs * 100 / rootTotal);
         line(
             sb,
-            "    %10s %9s %11s %10s %11s %9s  %s",
+            "Light updates (estimated from 1/%d timed samples): %d x %.0f ns = %.1f ms | block ticks scheduled by worldgen: %d",
+            ChunkProfiler.LIGHT_SAMPLE_RATE,
+            lights,
+            perLightNs,
+            lights * perLightNs / 1e6,
+            ticks);
+        list.sort((a, b) -> Long.compare(b.setBlocks, a.setBlocks));
+        line(
+            sb,
+            "    %10s %8s %10s %10s %8s %10s %9s  %s",
             "setBlock",
             "per call",
+            "est. ms",
             "light upd",
             "per call",
-            "est. light",
+            "sched.tick",
             "calls",
             "section (direct calls only)");
         for (int i = 0; i < Math.min(topEntries, list.size()); i++) {
             Flat f = list.get(i);
             line(
                 sb,
-                "    %10d %9.1f %11d %10.1f %8.1f ms %9d  %s",
+                "    %10d %8.1f %10.1f %10d %8.1f %10d %9d  %s",
                 f.setBlocks,
                 f.count == 0 ? 0 : (double) f.setBlocks / f.count,
+                f.setBlocks * perBlockNs / 1e6,
                 f.lightUpdates,
                 f.count == 0 ? 0 : (double) f.lightUpdates / f.count,
-                f.lightUpdates * perLightMs,
+                f.scheduledTicks,
                 f.count,
                 f.key);
         }
@@ -355,13 +381,14 @@ public final class ProfileReport {
     }
 
     private static String counters(ProfileNode n) {
-        long blocks = 0, lights = 0;
+        long blocks = 0, lights = 0, ticks = 0;
         for (ProfileNode c : n.children) {
             if (c.section == Section.SET_BLOCK) blocks += c.count;
             else if (c.section == Section.LIGHT_UPDATE) lights += c.count;
+            else if (c.section == Section.SCHEDULED_TICK) ticks += c.count;
         }
-        if (blocks == 0 && lights == 0) return "";
-        return "  {setBlock " + blocks + ", light " + lights + "}";
+        if (blocks == 0 && lights == 0 && ticks == 0) return "";
+        return "  {setBlock " + blocks + ", light " + lights + (ticks > 0 ? ", scheduled ticks " + ticks : "") + "}";
     }
 
     private static void appendWorldState(StringBuilder sb) {
@@ -419,7 +446,7 @@ public final class ProfileReport {
         final String key;
         long count, total, self, max;
         /** direct counter children */
-        long setBlocks, lightUpdates;
+        long setBlocks, lightUpdates, scheduledTicks;
 
         Flat(Section section, String key) {
             this.section = section;
@@ -441,6 +468,7 @@ public final class ProfileReport {
             for (ProfileNode cc : c.children) {
                 if (cc.section == Section.SET_BLOCK) f.setBlocks += cc.count;
                 else if (cc.section == Section.LIGHT_UPDATE) f.lightUpdates += cc.count;
+                else if (cc.section == Section.SCHEDULED_TICK) f.scheduledTicks += cc.count;
             }
             if (c.maxNs > f.max) f.max = c.maxNs;
             boolean outer = onPath.add(c.key);

@@ -14,8 +14,9 @@ import fastloader.profiler.Section;
 @Mixin(targets = "rwg.world.ChunkGeneratorRealistic", remap = false)
 public class MixinChunkGeneratorRealistic {
 
-    private static final String GENERATE_MAP_GEN = "Lrwg/biomes/realistic/RealisticBiomeBase;generateMapGen([Lnet/minecraft/block/Block;[BLjava/lang/Long;Lnet/minecraft/world/World;Lrwg/world/ChunkManagerRealistic;Ljava/util/Random;IILrwg/util/NoiseGenerator;Lrwg/util/CellNoise;[F)V";
-    private static final String R_DECORATE = "Lrwg/biomes/realistic/RealisticBiomeBase;rDecorate(Lnet/minecraft/world/World;Ljava/util/Random;IILrwg/util/NoiseGenerator;Lrwg/util/CellNoise;FF)V";
+    // owner + name only: the descriptor differs between RWG versions
+    private static final String GENERATE_MAP_GEN = "Lrwg/biomes/realistic/RealisticBiomeBase;generateMapGen";
+    private static final String R_DECORATE = "Lrwg/biomes/realistic/RealisticBiomeBase;rDecorate";
 
     @Inject(method = "generateTerrain", at = @At("HEAD"), require = 0)
     private void fastloader$terrainHead(CallbackInfo ci) {

@@ -30,6 +30,7 @@ public final class ChunkProfiler {
     public static volatile boolean profileLighting = true;
     public static volatile boolean countSetBlock = true;
     static final int LIGHT_SAMPLE_RATE = 32;
+    static final int SET_BLOCK_SAMPLE_RATE = 64;
     public static volatile boolean profileEvents = true;
     public static volatile long slowChunkNs = 50_000_000L;
     public static volatile long slowTickNs = 50_000_000L;
@@ -136,6 +137,42 @@ public final class ChunkProfiler {
         return true;
     }
 
+    /**
+     * World.setBlock entry: counted inside chunk work, every {@link #SET_BLOCK_SAMPLE_RATE}th call is timed together
+     * with its internals. setBlock can nest (onBlockAdded placing blocks), so the sample frame remembers the nesting
+     * level it was pushed at and only the matching {@link #setBlockExit()} ends it.
+     */
+    public static void setBlockEnter() {
+        ThreadState st = TL.get();
+        if (st == null) return;
+        st.setBlockLevel++;
+        if (!enabled || !countSetBlock || st.depth == 0 || st.hardEpoch != hardEpoch) return;
+        Frame top = st.stack[st.depth - 1];
+        if (top.node != null) top.node.child(Section.SET_BLOCK, Section.SET_BLOCK.label).count++;
+        if (top.section.isSample()) return; // no samples inside samples
+        if (++st.setBlockCalls % SET_BLOCK_SAMPLE_RATE != 0) return;
+        push0(Section.SET_BLOCK_SAMPLE, Section.SET_BLOCK_SAMPLE.label, false, 0, 0, 0);
+        st.stack[st.depth - 1].x = st.setBlockLevel;
+    }
+
+    public static void setBlockExit() {
+        ThreadState st = TL.get();
+        if (st == null) return;
+        if (st.depth > 0) {
+            Frame top = st.stack[st.depth - 1];
+            if (top.section == Section.SET_BLOCK_SAMPLE && top.x == st.setBlockLevel) pop(Section.SET_BLOCK_SAMPLE);
+        }
+        if (st.setBlockLevel > 0) st.setBlockLevel--;
+    }
+
+    /** Pushes a setBlock internal step, only while a setBlock sample is being timed. */
+    public static void pushInSample(Section s) {
+        if (!enabled) return;
+        ThreadState st = TL.get();
+        if (st == null || st.depth == 0 || st.hardEpoch != hardEpoch) return;
+        if (st.stack[st.depth - 1].section.isSample()) push0(s, s.label, false, 0, 0, 0);
+    }
+
     /** Ends the most recent frame of the given section (unwinding frames left behind by exceptions). */
     public static void pop(Section s) {
         ThreadState st = TL.get();
@@ -208,6 +245,7 @@ public final class ChunkProfiler {
         Thread t = Thread.currentThread();
         serverThread = t;
         ThreadState st = TL.get();
+        if (st != null) st.setBlockLevel = 0;
         if (st != null && st.depth != 0) {
             // something threw inside a profiled section last tick, drop the stale frames
             st.clear();
@@ -613,6 +651,8 @@ public final class ChunkProfiler {
         int depth;
         int detailFrames;
         int lightCalls;
+        int setBlockCalls;
+        int setBlockLevel;
 
         ThreadState(Thread thread) {
             this.thread = thread;

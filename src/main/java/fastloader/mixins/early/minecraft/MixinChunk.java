@@ -1,5 +1,6 @@
 package fastloader.mixins.early.minecraft;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 
@@ -7,6 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Section;
@@ -74,5 +76,28 @@ public class MixinChunk {
     @Inject(method = "func_150804_b", at = @At("RETURN"), require = 0)
     private void fastloader$lightCheckReturn(boolean flag, CallbackInfo ci) {
         ChunkProfiler.pop(Section.LIGHT_CHECK);
+    }
+
+    // ---- setBlock internals, only timed inside a setBlock sample
+
+    @Inject(method = "func_150807_a", at = @At("HEAD"), require = 0)
+    private void fastloader$storeHead(int x, int y, int z, Block block, int meta, CallbackInfoReturnable<Boolean> cir) {
+        ChunkProfiler.pushInSample(Section.SB_CHUNK);
+    }
+
+    @Inject(method = "func_150807_a", at = @At("RETURN"), require = 0)
+    private void fastloader$storeReturn(int x, int y, int z, Block block, int meta,
+        CallbackInfoReturnable<Boolean> cir) {
+        ChunkProfiler.pop(Section.SB_CHUNK);
+    }
+
+    @Inject(method = "relightBlock", at = @At("HEAD"), require = 0)
+    private void fastloader$relightHead(int x, int y, int z, CallbackInfo ci) {
+        ChunkProfiler.pushInSample(Section.SB_RELIGHT);
+    }
+
+    @Inject(method = "relightBlock", at = @At("RETURN"), require = 0)
+    private void fastloader$relightReturn(int x, int y, int z, CallbackInfo ci) {
+        ChunkProfiler.pop(Section.SB_RELIGHT);
     }
 }
