@@ -35,6 +35,8 @@ public final class ChunkProfiler {
     public static volatile long slowTickNs = 50_000_000L;
     public static volatile long reportIntervalNs = 60_000_000_000L;
     public static volatile int maxLogsPerInterval = 20;
+    /** A report is written this long after the last generated chunk. */
+    public static volatile long idleFlushNs = 10_000_000_000L;
     public static volatile boolean logCascades = true;
 
     // ---------------------------------------------------------------- frame flags
@@ -65,6 +67,8 @@ public final class ChunkProfiler {
 
     // per-tick data, server thread only
     private static long tickStartNs;
+    private static long lastGenerated;
+    private static long lastGenerationNs;
     private static long tickChunkNs;
     private static int tickGenerated, tickLoaded, tickPopulated, tickCascades;
     private static final HashMap<String, long[]> tickSelf = new HashMap<>();
@@ -233,8 +237,17 @@ public final class ChunkProfiler {
                 if (iv.slowTickLogs.incrementAndGet() <= maxLogsPerInterval) logSlowTick(dur);
             }
         }
-        if (now - iv.startNanos >= reportIntervalNs) {
-            if (enabled && (iv.ticks > 0)) ProfileReport.periodic(iv);
+        // automatic reports: only when chunks were generated, and as soon as generation stops
+        long generated = iv.generated.sum();
+        if (generated != lastGenerated) {
+            lastGenerated = generated;
+            lastGenerationNs = now;
+        }
+        if (generated > 0 && enabled && now - lastGenerationNs >= idleFlushNs) {
+            ProfileReport.periodic(iv, "chunk generation stopped");
+            resetInterval();
+        } else if (now - iv.startNanos >= reportIntervalNs) {
+            if (enabled && generated > 0) ProfileReport.periodic(iv, "interval");
             resetInterval();
         }
     }
@@ -251,9 +264,15 @@ public final class ChunkProfiler {
         tickAdd(keys[what], ns, false);
     }
 
+    /** True when the running interval contains generated chunks (i.e. a report would say something). */
+    public static boolean hasGeneration() {
+        return interval.generated.sum() > 0;
+    }
+
     public static void resetInterval() {
         interval = new Interval();
         epoch++;
+        lastGenerated = 0;
     }
 
     public static void setEnabled(boolean on) {

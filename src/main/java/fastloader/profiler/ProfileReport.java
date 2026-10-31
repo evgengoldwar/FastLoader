@@ -40,7 +40,8 @@ public final class ProfileReport {
         reportFile = null;
     }
 
-    static void periodic(Interval iv) {
+    static void periodic(Interval iv, String reason) {
+        FastLoader.LOG.info("Chunk profile ({}): {}", reason, shortStatus());
         String summary = build(iv, false);
         FastLoader.LOG.info("\n" + (treeInLog ? build(iv, true) : summary));
         if (writeFiles) writeToFile(build(iv, true));

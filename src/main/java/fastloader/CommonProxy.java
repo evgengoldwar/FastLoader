@@ -37,6 +37,6 @@ public class CommonProxy {
 
     public void serverStopping(FMLServerStoppingEvent event) {
         ChunkPregenerator.INSTANCE.stop(null);
-        if (ChunkProfiler.enabled) ProfileReport.manual();
+        if (ChunkProfiler.enabled && ChunkProfiler.hasGeneration()) ProfileReport.manual();
     }
 }

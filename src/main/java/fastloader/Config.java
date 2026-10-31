@@ -40,7 +40,15 @@ public class Config {
             true,
             "Time every Forge event listener that runs inside chunk work (ChunkEvent.Load, PopulateChunkEvent, DecorateBiomeEvent, OreGenEvent...).");
         ChunkProfiler.reportIntervalNs = configuration
-            .getInt("reportIntervalSeconds", PROFILER, 60, 5, 3600, "How often a full report is logged / written to file.")
+            .getInt("reportIntervalSeconds", PROFILER, 60, 5, 3600, "While chunks keep being generated, a report is also written at least this often.")
+            * 1_000_000_000L;
+        ChunkProfiler.idleFlushNs = configuration.getInt(
+            "reportAfterIdleSeconds",
+            PROFILER,
+            10,
+            1,
+            3600,
+            "Write a report this many seconds after chunk generation stops (no commands needed). Intervals without generated chunks are not reported.")
             * 1_000_000_000L;
         ChunkProfiler.slowChunkNs = configuration.getInt(
             "slowChunkThresholdMs",

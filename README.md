@@ -43,20 +43,19 @@
 
 ## Использование
 
+Никаких команд не нужно:
+
 1. Положить мод в `mods/` (нужен GTNHMixins/UniMixins, как у всех модов GTNH).
-2. Запустить сервер/мир — профайлер включён по умолчанию.
-3. Летать / телепортироваться или запустить бенчмарк:
-
-```
-/fastloader pregen 32
-```
-
-   (сгенерировать квадрат радиусом 32 чанка вокруг себя; `/fastloader pregen 64 0 0 0` — dim 0, центр в чанке 0,0)
-
+2. Зайти в мир и просто летать / бегать / телепортироваться, чтобы генерировались новые чанки.
+3. Как только ты перестаёшь генерировать (по умолчанию 10 с без новых чанков), отчёт пишется автоматически.
+   При долгой непрерывной генерации — ещё и раз в 60 с. Время, когда чанки не генерировались, в отчёты не попадает.
 4. Смотреть:
-   * основной лог (`logs/fml-server-latest.log` / `logs/latest.log`) — строки `[slow chunk]`, `[slow tick]`,
-     `[cascade]`, `[pregen]` и сводки;
-   * `fastloader/chunkprofile-<дата>.log` в папке игры — полные отчёты с деревом вызовов.
+   * `fastloader/chunkprofile-<дата>.log` в папке игры — полные отчёты с деревом вызовов (новый файл на каждый
+     запуск мира);
+   * основной лог (`logs/fml-client-latest.log` в одиночке, `logs/fml-server-latest.log` на сервере) — строки
+     `[slow chunk]`, `[slow tick]`, `[cascade]` и краткие сводки `Chunk profile (...)`.
+
+Команды ниже — необязательные (ручной отчёт, бенчмарк-прегенерация).
 
 ### Команды (`/fastloader` или `/fl`, уровень OP 2)
 
@@ -71,7 +70,7 @@
 
 ### Конфиг (`config/fastloader.cfg`)
 
-`profiler`: `enabled`, `reportIntervalSeconds`, `slowChunkThresholdMs`, `slowTickThresholdMs`,
+`profiler`: `enabled`, `reportAfterIdleSeconds`, `reportIntervalSeconds`, `slowChunkThresholdMs`, `slowTickThresholdMs`,
 `maxLogsPerInterval`, `logCascades`, `profileLighting`, `countSetBlock`, `profileEventListeners`, `topEntries`,
 `writeReportFiles`, `callTreeInLog`.
 `pregen`: `tickBudgetMs` (сколько мс тика можно тратить на генерацию), `progressLogSeconds`.
