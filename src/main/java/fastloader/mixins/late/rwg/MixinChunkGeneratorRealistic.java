@@ -59,7 +59,10 @@ public class MixinChunkGeneratorRealistic {
         ChunkProfiler.pop(Section.RWG_SURFACE);
     }
 
-    @Inject(method = { "provideChunk", "func_73154_d" }, at = @At(value = "INVOKE", target = GENERATE_MAP_GEN), require = 0)
+    @Inject(
+        method = { "provideChunk", "func_73154_d" },
+        at = @At(value = "INVOKE", target = GENERATE_MAP_GEN),
+        require = 0)
     private void fastloader$mapGenBefore(CallbackInfo ci) {
         ChunkProfiler.pushNested(Section.RWG_MAPGEN);
     }
@@ -77,7 +80,10 @@ public class MixinChunkGeneratorRealistic {
         ChunkProfiler.pushNested(Section.RWG_DECORATE);
     }
 
-    @Inject(method = { "populate", "func_73153_a" }, at = @At(value = "INVOKE", target = R_DECORATE, shift = At.Shift.AFTER), require = 0)
+    @Inject(
+        method = { "populate", "func_73153_a" },
+        at = @At(value = "INVOKE", target = R_DECORATE, shift = At.Shift.AFTER),
+        require = 0)
     private void fastloader$decorateAfter(CallbackInfo ci) {
         ChunkProfiler.pop(Section.RWG_DECORATE);
     }

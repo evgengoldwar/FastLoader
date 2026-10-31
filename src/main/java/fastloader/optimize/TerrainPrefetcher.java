@@ -183,10 +183,8 @@ public final class TerrainPrefetcher {
                 poolSize());
             return ws;
         } catch (Throwable t) {
-            FastLoader.LOG.warn(
-                "[prefetch] cannot prefetch terrain for dim {}: {}",
-                world.provider.dimensionId,
-                t.toString());
+            FastLoader.LOG
+                .warn("[prefetch] cannot prefetch terrain for dim {}: {}", world.provider.dimensionId, t.toString());
             UNSUPPORTED.add(world);
             return null;
         }
