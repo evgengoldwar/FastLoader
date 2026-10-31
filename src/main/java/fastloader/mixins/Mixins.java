@@ -22,6 +22,8 @@ public enum Mixins implements IMixins {
     // Optimizations (each can be switched off in config/fastloader.cfg, category "optimizations")
     OPT_CHUNK_LOOKUP_CACHE(new MixinBuilder("Cache the last chunks looked up by provideChunk").setPhase(Phase.EARLY)
         .addCommonMixins("minecraft.MixinChunkProviderServer_LookupCache")),
+    OPT_TERRAIN_PREFETCH(new MixinBuilder("Generate terrain on background threads").setPhase(Phase.EARLY)
+        .addCommonMixins("minecraft.MixinChunkProviderServer_Prefetch", "forge.MixinTerrainGen")),
     PROFILER_LIGHTING(new MixinBuilder("Chunk pipeline profiler: lighting").setPhase(Phase.EARLY)
         .addCommonMixins("minecraft.MixinWorld")),
     PROFILER_TERRAIN(new MixinBuilder("Chunk pipeline profiler: terrain / decoration internals").setPhase(Phase.EARLY)

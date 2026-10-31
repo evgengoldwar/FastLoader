@@ -23,6 +23,7 @@ import net.minecraft.world.WorldServer;
 import cpw.mods.fml.common.Loader;
 import fastloader.FastLoader;
 import fastloader.optimize.ChunkLookupCache;
+import fastloader.optimize.TerrainPrefetcher;
 
 /** Turns the profiler data into a human readable report (log + file). */
 public final class ProfileReport {
@@ -190,6 +191,7 @@ public final class ProfileReport {
         // ---- world state
         appendWorldState(sb);
         line(sb, "%s", ChunkLookupCache.describe());
+        line(sb, "%s", TerrainPrefetcher.describe());
 
         // ---- trees per thread role
         Map<String, ProfileNode> roles = mergedTrees();

@@ -85,7 +85,8 @@ public enum Section {
     RWG_DECORATE("RWG RealisticBiomeBase.rDecorate (biome decorators)", Flags.ATTRIBUTABLE),
 
     // ---- FastLoader itself ----
-    PREGEN("FastLoader pregenerator batch", 0);
+    PREGEN("FastLoader pregenerator batch", 0),
+    PREFETCH("FastLoader terrain prefetch (background thread)", 0);
 
     public final String label;
     final int flags;

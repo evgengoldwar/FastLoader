@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import fastloader.optimize.TerrainPrefetcher;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Section;
 
@@ -57,8 +58,13 @@ public class MixinChunk {
         ChunkProfiler.pop(Section.LIGHT_INIT);
     }
 
-    @Inject(method = "generateSkylightMap", at = @At("HEAD"), require = 0)
+    @Inject(method = "generateSkylightMap", at = @At("HEAD"), cancellable = true, require = 0)
     private void fastloader$skylightHead(CallbackInfo ci) {
+        // lighting engines (ArchaicFix) are not thread safe: prefetched chunks get their skylight on the main thread
+        if (TerrainPrefetcher.isWorkerThread()) {
+            ci.cancel();
+            return;
+        }
         ChunkProfiler.push(Section.SKYLIGHT);
     }
 

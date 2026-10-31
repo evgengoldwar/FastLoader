@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import fastloader.optimize.TerrainPrefetcher;
 import fastloader.profiler.ChunkProfiler;
 
 @Mixin(MinecraftServer.class)
@@ -19,6 +20,7 @@ public class MixinMinecraftServer {
 
     @Inject(method = "tick", at = @At("RETURN"), require = 0)
     private void fastloader$tickEnd(CallbackInfo ci) {
+        TerrainPrefetcher.tick();
         ChunkProfiler.onServerTickEnd();
     }
 }

@@ -5,6 +5,8 @@ import java.io.File;
 import net.minecraftforge.common.config.Configuration;
 
 import fastloader.optimize.ChunkLookupCache;
+import fastloader.optimize.HodgepodgeTuning;
+import fastloader.optimize.TerrainPrefetcher;
 import fastloader.pregen.ChunkPregenerator;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.ProfileReport;
@@ -103,12 +105,80 @@ public class Config {
 
         configuration.setCategoryComment(
             OPTIMIZATIONS,
-            "Chunk generation optimizations. None of them changes what is generated, only how fast.");
+            "Chunk generation optimizations. None of them changes what is generated, only how fast and on which thread.");
         ChunkLookupCache.enabled = configuration.getBoolean(
             "chunkLookupCache",
             OPTIMIZATIONS,
             true,
             "Cache the last 4 chunks looked up through provideChunk (every getBlock/setBlock does such a lookup).");
+
+        TerrainPrefetcher.enabled = configuration.getBoolean(
+            "terrainPrefetch",
+            OPTIMIZATIONS,
+            true,
+            "Generate terrain (the chunk generator's provideChunk) for chunks around players on background threads, like modern Minecraft. Population, lighting and everything else that touches the world stays on the server thread. Only used for the generators listed in prefetchGenerators.");
+        TerrainPrefetcher.threads = configuration.getInt(
+            "prefetchThreads",
+            OPTIMIZATIONS,
+            0,
+            0,
+            32,
+            "Background terrain threads. 0 = automatic (CPU cores - 3, at most 6, at least 1).");
+        TerrainPrefetcher.extraRadius = configuration.getInt(
+            "prefetchExtraRadius",
+            OPTIMIZATIONS,
+            2,
+            0,
+            8,
+            "Prefetch terrain this many chunks beyond the view distance (population needs neighbours).");
+        TerrainPrefetcher.maxReady = configuration.getInt(
+            "prefetchMaxReady",
+            OPTIMIZATIONS,
+            512,
+            16,
+            8192,
+            "Maximum prefetched chunks kept in memory per dimension (about 100-200 KB each).");
+        TerrainPrefetcher.waitMs = configuration.getInt(
+            "prefetchWaitMs",
+            OPTIMIZATIONS,
+            50,
+            0,
+            1000,
+            "When the server needs a chunk a worker is still generating, wait this long for it before generating it itself.");
+        TerrainPrefetcher.generators = new java.util.HashSet<>(
+            java.util.Arrays.asList(
+                configuration.getStringList(
+                    "prefetchGenerators",
+                    OPTIMIZATIONS,
+                    new String[] { "rwg.world.ChunkGeneratorRealistic" },
+                    "Chunk generator classes whose terrain may be generated on background threads. They must re-seed per chunk and keep their state in the generator instance. Vanilla generators are NOT safe (GenLayer uses a static IntCache).")));
+
+        HodgepodgeTuning.enabled = configuration.getBoolean(
+            "hodgepodgeTuning",
+            OPTIMIZATIONS,
+            true,
+            "Raise Hodgepodge's chunk generation throttle (4 chunks per player per tick / 20 ms by default) at server start, so the time saved by background terrain turns into faster world loading. Hodgepodge still never runs generation past the end of the 50 ms tick.");
+        HodgepodgeTuning.maxChunkGenPerPlayerPerTick = configuration.getInt(
+            "hodgepodgeMaxChunkGenPerPlayerPerTick",
+            OPTIMIZATIONS,
+            10,
+            1,
+            20,
+            "Value for Hodgepodge's maxChunkGenPerPlayerPerTick.");
+        HodgepodgeTuning.chunkGenBudgetMs = configuration.getInt(
+            "hodgepodgeChunkGenBudgetMs",
+            OPTIMIZATIONS,
+            40,
+            0,
+            50,
+            "Value for Hodgepodge's chunkGenBudgetMs (generation only uses what is left of the 50 ms tick).");
+        HodgepodgeTuning.forcePopulateAgeTicks = configuration.getInt(
+            "hodgepodgeForcePopulateAgeTicks",
+            OPTIMIZATIONS,
+            20,
+            0,
+            1200,
+            "Value for Hodgepodge's forcePopulateAgeTicks: how long a visible hole next to a player may wait (100 = 5 s by default).");
 
         configuration.setCategoryComment(PREGEN, "/fastloader pregen: benchmark / pregeneration tool.");
         ChunkPregenerator.tickBudgetNs = configuration.getInt(

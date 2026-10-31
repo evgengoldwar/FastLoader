@@ -3,6 +3,8 @@ package fastloader.mixins.early.minecraft;
 import net.minecraft.block.Block;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.WorldChunkManager;
 import net.minecraft.world.chunk.Chunk;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import fastloader.optimize.TerrainPrefetcher;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Section;
 
@@ -72,5 +75,19 @@ public class MixinWorld {
     private void fastloader$notifyReturn(int x, int y, int z, Chunk chunk, Block oldBlock, Block newBlock, int flags,
         CallbackInfo ci) {
         ChunkProfiler.pop(Section.SB_NOTIFY);
+    }
+
+    // ---- terrain worker threads: answer biome lookups from the worker's private biome manager
+
+    @Inject(method = "getBiomeGenForCoordsBody", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    private void fastloader$workerBiome(int x, int z, CallbackInfoReturnable<BiomeGenBase> cir) {
+        WorldChunkManager cm = TerrainPrefetcher.workerChunkManager();
+        if (cm != null) cir.setReturnValue(cm.getBiomeGenAt(x, z));
+    }
+
+    @Inject(method = "getWorldChunkManager", at = @At("HEAD"), cancellable = true, require = 0)
+    private void fastloader$workerChunkManager(CallbackInfoReturnable<WorldChunkManager> cir) {
+        WorldChunkManager cm = TerrainPrefetcher.workerChunkManager();
+        if (cm != null) cir.setReturnValue(cm);
     }
 }
