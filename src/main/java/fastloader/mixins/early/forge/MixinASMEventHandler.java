@@ -14,7 +14,8 @@ import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Section;
 
 /**
- * Times every Forge/FML event listener that runs inside chunk work (ChunkEvent.Load, ChunkDataEvent, PopulateChunkEvent,
+ * Times every Forge/FML event listener that runs inside chunk work (ChunkEvent.Load, ChunkDataEvent,
+ * PopulateChunkEvent,
  * DecorateBiomeEvent, OreGenEvent, GT VeinGenerateEvent, ...), named by owning mod, handler class and method.
  */
 @Mixin(value = ASMEventHandler.class, remap = false)

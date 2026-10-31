@@ -122,6 +122,7 @@ public final class ChunkProfiler {
 
     /**
      * Light update entry: always counted, every {@link #LIGHT_SAMPLE_RATE}th call inside chunk work is timed.
+     * 
      * @return true if a sample frame was pushed (the caller must pop {@link Section#LIGHT_SAMPLE})
      */
     public static boolean lightUpdate() {

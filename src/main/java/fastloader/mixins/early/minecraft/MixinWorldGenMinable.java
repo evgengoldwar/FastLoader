@@ -17,8 +17,7 @@ import fastloader.profiler.Section;
 public class MixinWorldGenMinable {
 
     @Inject(method = "generate", at = @At("HEAD"), require = 0)
-    private void fastloader$head(World world, Random random, int x, int y, int z,
-        CallbackInfoReturnable<Boolean> cir) {
+    private void fastloader$head(World world, Random random, int x, int y, int z, CallbackInfoReturnable<Boolean> cir) {
         ChunkProfiler.pushNested(Section.MINABLE);
     }
 
