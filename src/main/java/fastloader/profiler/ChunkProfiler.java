@@ -159,6 +159,9 @@ public final class ChunkProfiler {
         if (st == null) return;
         st.setBlockLevel++;
         if (!enabled || !countSetBlock || st.depth == 0 || st.hardEpoch != hardEpoch) return;
+        // setBlock calls made from inside another setBlock (onBlockAdded, neighbour updates...) are part of the outer
+        // call's cost; counting them too would multiply the sampled average by too many calls
+        if (st.setBlockLevel != 1) return;
         Frame top = st.stack[st.depth - 1];
         if (top.node != null) top.node.child(Section.SET_BLOCK, Section.SET_BLOCK.label).count++;
         if (top.section.isSample()) return; // no samples inside samples
