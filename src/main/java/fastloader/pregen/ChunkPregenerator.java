@@ -88,7 +88,8 @@ public final class ChunkPregenerator {
             List<?> players = world.playerEntities;
             for (Object o : players) {
                 if (o instanceof EntityPlayerMP && ((EntityPlayerMP) o).canCommandSenderUseCommand(2, "fastloader")) {
-                    ((EntityPlayerMP) o).addChatMessage(new ChatComponentText("[FastLoader] pregen finished: " + j.describe()));
+                    ((EntityPlayerMP) o)
+                        .addChatMessage(new ChatComponentText("[FastLoader] pregen finished: " + j.describe()));
                 }
             }
         }
@@ -149,9 +150,8 @@ public final class ChunkPregenerator {
 
         private static boolean isWatched(WorldServer world, int x, int z) {
             for (Object o : world.playerEntities) {
-                if (o instanceof EntityPlayerMP
-                    && world.getPlayerManager()
-                        .isPlayerWatchingChunk((EntityPlayerMP) o, x, z)) {
+                if (o instanceof EntityPlayerMP && world.getPlayerManager()
+                    .isPlayerWatchingChunk((EntityPlayerMP) o, x, z)) {
                     return true;
                 }
             }

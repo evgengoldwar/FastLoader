@@ -176,14 +176,19 @@ public final class ProfileReport {
             flats.sort((a, b) -> Long.compare(b.self, a.self));
             for (int i = 0; i < Math.min(topEntries, flats.size()); i++) row(sb, flats.get(i), rootTotal);
 
-            appendCategory(sb, flats, rootTotal, "Mod world generators (IWorldGenerator) by total time:", Section.WORLDGEN);
-            appendCategory(sb, flats, rootTotal, "Chunk provider terrain (provideChunk) by total time:", Section.TERRAIN);
             appendCategory(
                 sb,
                 flats,
                 rootTotal,
-                "Chunk provider population by total time:",
-                Section.PROVIDER_POPULATE);
+                "Mod world generators (IWorldGenerator) by total time:",
+                Section.WORLDGEN);
+            appendCategory(
+                sb,
+                flats,
+                rootTotal,
+                "Chunk provider terrain (provideChunk) by total time:",
+                Section.TERRAIN);
+            appendCategory(sb, flats, rootTotal, "Chunk provider population by total time:", Section.PROVIDER_POPULATE);
             appendCategory(sb, flats, rootTotal, "Event listeners fired during chunk work:", Section.EVENT);
             appendCategory(sb, flats, rootTotal, "Map generators / structures:", Section.MAPGEN, Section.STRUCTURE);
             appendCategory(sb, flats, rootTotal, "Biome decoration:", Section.DECORATE);
@@ -286,7 +291,16 @@ public final class ProfileReport {
     }
 
     private static void header(StringBuilder sb) {
-        line(sb, "    %10s %10s %6s %9s %9s %9s  %s", "total ms", "self ms", "self%", "calls", "avg ms", "max ms", "section");
+        line(
+            sb,
+            "    %10s %10s %6s %9s %9s %9s  %s",
+            "total ms",
+            "self ms",
+            "self%",
+            "calls",
+            "avg ms",
+            "max ms",
+            "section");
     }
 
     private static void row(StringBuilder sb, Flat f, long rootTotal) {
@@ -377,7 +391,8 @@ public final class ProfileReport {
     private static int gtPendingTasks() {
         if (!gtPendingLooked) {
             gtPendingLooked = true;
-            for (String cls : new String[] { "gregtech.common.GTWorldgenerator", "gregtech.common.GT_Worldgenerator" }) {
+            for (String cls : new String[] { "gregtech.common.GTWorldgenerator",
+                "gregtech.common.GT_Worldgenerator" }) {
                 try {
                     Field f = Class.forName(cls)
                         .getDeclaredField("PENDING_TASKS");
@@ -440,7 +455,8 @@ public final class ProfileReport {
         int epoch = ChunkProfiler.epoch;
         // server thread first
         List<ChunkProfiler.ThreadState> states = new ArrayList<>(ChunkProfiler.STATES);
-        states.sort((a, b) -> Boolean.compare(b.thread == ChunkProfiler.serverThread, a.thread == ChunkProfiler.serverThread));
+        states.sort(
+            (a, b) -> Boolean.compare(b.thread == ChunkProfiler.serverThread, a.thread == ChunkProfiler.serverThread));
         for (ChunkProfiler.ThreadState st : states) {
             if (st.epoch != epoch) continue;
             ProfileNode merged = roles.get(st.role);

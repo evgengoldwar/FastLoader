@@ -166,7 +166,8 @@ public final class ChunkProfiler {
     }
 
     /**
-     * {@code AnvilChunkLoader.loadEntities}: when it runs directly inside ChunkIO stage 2 the chunk was really read from
+     * {@code AnvilChunkLoader.loadEntities}: when it runs directly inside ChunkIO stage 2 the chunk was really read
+     * from
      * disk, so that frame gets its coordinates and the load is counted.
      */
     public static void onLoadEntities(int dim, int x, int z) {
@@ -644,8 +645,8 @@ public final class ChunkProfiler {
             // "Chunk I/O Executor Thread-3" -> "Chunk I/O Executor Thread"
             int end = name.length();
             while (end > 0 && Character.isDigit(name.charAt(end - 1))) end--;
-            while (end > 0 && (name.charAt(end - 1) == '-' || name.charAt(end - 1) == '#'
-                || name.charAt(end - 1) == ' ')) end--;
+            while (end > 0
+                && (name.charAt(end - 1) == '-' || name.charAt(end - 1) == '#' || name.charAt(end - 1) == ' ')) end--;
             return end == 0 ? name : name.substring(0, end);
         }
     }

@@ -52,13 +52,23 @@ final class Histogram {
     String describe() {
         if (count() == 0) return "no samples";
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("n=%d avg=%.2fms p50%s p90%s p99%s max=%.2fms |", count(), avgMs(), percentile(0.5),
-            percentile(0.9), percentile(0.99), maxMs()));
+        sb.append(
+            String.format(
+                "n=%d avg=%.2fms p50%s p90%s p99%s max=%.2fms |",
+                count(),
+                avgMs(),
+                percentile(0.5),
+                percentile(0.9),
+                percentile(0.99),
+                maxMs()));
         for (int i = 0; i < buckets.length(); i++) {
             long b = buckets.get(i);
             if (b == 0) continue;
             String label = i < BOUNDS_MS.length ? "<" + fmt(BOUNDS_MS[i]) : ">=" + fmt(BOUNDS_MS[BOUNDS_MS.length - 1]);
-            sb.append(' ').append(label).append("ms:").append(b);
+            sb.append(' ')
+                .append(label)
+                .append("ms:")
+                .append(b);
         }
         return sb.toString();
     }
