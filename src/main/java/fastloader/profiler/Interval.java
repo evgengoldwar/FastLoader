@@ -39,6 +39,8 @@ final class Interval {
 
     // server tick stats (server thread only)
     long ticks;
+    /** [world tick incl. chunk work, entities + tile entities, block / chunk ticking], summed over dimensions */
+    final long[] worldNs = new long[3];
     long slowTicks;
     long chunkWorkNs;
     long maxChunkWorkNs;

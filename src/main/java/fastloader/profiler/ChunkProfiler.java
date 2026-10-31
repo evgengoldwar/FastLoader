@@ -371,6 +371,7 @@ public final class ChunkProfiler {
             worldKeys.put(dim, keys);
         }
         tickAdd(keys[what], ns, false);
+        interval.worldNs[what] += ns;
     }
 
     /** True when the running interval contains generated chunks (i.e. a report would say something). */
@@ -384,6 +385,7 @@ public final class ChunkProfiler {
         lastGenerated = 0;
         StackSampler.reset();
         ChunkLookupCache.resetStats();
+        fastloader.optimize.SimulationDistance.resetStats();
     }
 
     public static void setEnabled(boolean on) {

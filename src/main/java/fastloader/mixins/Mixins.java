@@ -24,6 +24,8 @@ public enum Mixins implements IMixins {
         .addCommonMixins("minecraft.MixinChunkProviderServer_LookupCache")),
     OPT_TERRAIN_PREFETCH(new MixinBuilder("Generate terrain on background threads").setPhase(Phase.EARLY)
         .addCommonMixins("minecraft.MixinChunkProviderServer_Prefetch", "forge.MixinTerrainGen")),
+    OPT_SIMULATION_DISTANCE(new MixinBuilder("Simulation distance for random ticks and entities").setPhase(Phase.EARLY)
+        .addCommonMixins("minecraft.MixinWorld_SimulationDistance")),
     PROFILER_LIGHTING(new MixinBuilder("Chunk pipeline profiler: lighting").setPhase(Phase.EARLY)
         .addCommonMixins("minecraft.MixinWorld")),
     PROFILER_TERRAIN(new MixinBuilder("Chunk pipeline profiler: terrain / decoration internals").setPhase(Phase.EARLY)

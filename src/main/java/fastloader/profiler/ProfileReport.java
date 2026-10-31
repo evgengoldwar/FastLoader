@@ -96,6 +96,16 @@ public final class ProfileReport {
                 iv.slowTicks);
         }
 
+        if (iv.ticks > 0) {
+            line(
+                sb,
+                "Rest of the tick (all dimensions, per tick): WorldServer.tick %.2f ms (incl. chunk work), updateEntities %.2f ms (entities + tile entities), block/chunk ticking %.2f ms",
+                iv.worldNs[0] / 1e6 / iv.ticks,
+                iv.worldNs[1] / 1e6 / iv.ticks,
+                iv.worldNs[2] / 1e6 / iv.ticks);
+            line(sb, "%s", fastloader.optimize.SimulationDistance.describe(iv.ticks));
+        }
+
         // ---- counters
         long loaded = iv.diskLoaded.sum() + iv.asyncFinished.sum();
         line(

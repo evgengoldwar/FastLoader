@@ -290,6 +290,10 @@ public final class TerrainPrefetcher {
         /** chunks known to be loaded or saved, so they are never prefetched (main thread only) */
         final Set<Long> known = new HashSet<>();
         volatile boolean disabled;
+        private long ticks;
+        private long lastPlayersKey;
+        /** the previous scan stopped because the queue was full: continue next tick */
+        private boolean scanCut;
 
         WorldState(WorldServer world, IChunkProvider main) throws Exception {
             this.world = world;
@@ -359,6 +363,18 @@ public final class TerrainPrefetcher {
                 .getViewDistance();
             int radius = viewDist + extraRadius;
 
+            // a full scan walks (2 * radius + 1)^2 positions: only do it when a player changed chunk, when the last
+            // scan was cut short by the queue limit, or every 5 ticks
+            long playersKey = 17;
+            for (Object o : world.playerEntities) {
+                EntityPlayer p = (EntityPlayer) o;
+                playersKey = playersKey * 31 + key((int) Math.floor(p.posX) >> 4, (int) Math.floor(p.posZ) >> 4);
+            }
+            boolean moved = playersKey != lastPlayersKey;
+            if (!moved && !scanCut && ticks++ % 5 != 0) return;
+            lastPlayersKey = playersKey;
+            scanCut = false;
+
             // drop results nobody will ask for anymore
             if (!ready.isEmpty()) {
                 ready.entrySet()
@@ -375,7 +391,10 @@ public final class TerrainPrefetcher {
             if (known.size() > 200_000) known.clear();
 
             int maxInFlight = poolSize * 4;
-            if (inFlight.size() >= maxInFlight || ready.size() >= maxReady) return;
+            if (inFlight.size() >= maxInFlight || ready.size() >= maxReady) {
+                scanCut = true;
+                return;
+            }
 
             // nearest first for every player
             for (Object o : world.playerEntities) {
@@ -406,7 +425,10 @@ public final class TerrainPrefetcher {
                             }
                         }
                         if (!consider(pcx + dx, pcz + dz)) continue;
-                        if (inFlight.size() >= maxInFlight || ready.size() >= maxReady) return;
+                        if (inFlight.size() >= maxInFlight || ready.size() >= maxReady) {
+                            scanCut = true;
+                            return;
+                        }
                     }
                 }
             }

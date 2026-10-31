@@ -7,6 +7,7 @@ import net.minecraftforge.common.config.Configuration;
 import fastloader.optimize.ChunkLookupCache;
 import fastloader.optimize.FastWorldgenWrites;
 import fastloader.optimize.HodgepodgeTuning;
+import fastloader.optimize.SimulationDistance;
 import fastloader.optimize.TerrainPrefetcher;
 import fastloader.pregen.ChunkPregenerator;
 import fastloader.profiler.ChunkProfiler;
@@ -159,6 +160,13 @@ public class Config {
             OPTIMIZATIONS,
             true,
             "During chunk population, store 'opaque block replaces opaque block' writes (stone -> dirt, gravel, ores, bedrock...) directly in chunks the client does not have yet. For these writes the full setBlock only stores the block anyway: no light, heightmap, client or neighbour change. Blocks with tile entities, falling blocks and blocks with custom add/break logic always use the full setBlock.");
+        SimulationDistance.chunks = configuration.getInt(
+            "simulationDistance",
+            OPTIMIZATIONS,
+            10,
+            0,
+            64,
+            "Like modern Minecraft: beyond this many chunks from every player, chunks get no random block ticks / ice / snow / lightning and non-player entities update once per second instead of every tick (they still despawn). Chunks are still lit and sent, chunk-loaded chunks and tile entities are not affected. Only matters when the view distance is larger. 0 = vanilla.");
         HodgepodgeTuning.enabled = configuration.getBoolean(
             "hodgepodgeTuning",
             OPTIMIZATIONS,
