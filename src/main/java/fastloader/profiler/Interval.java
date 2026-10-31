@@ -24,6 +24,13 @@ final class Interval {
     /** culprit key -> [generated, loaded] */
     final ConcurrentHashMap<String, LongAdder[]> cascadeCulprits = new ConcurrentHashMap<>();
 
+    /** caller signature -> count, for chunk loads requested outside other chunk work (sampled) */
+    final ConcurrentHashMap<String, LongAdder> loadCallers = new ConcurrentHashMap<>();
+    final AtomicInteger loadCallerSamples = new AtomicInteger();
+    /** generated chunks by distance to the nearest player, see ChunkProfiler.DIST_BOUNDS; last slot = no player */
+    final java.util.concurrent.atomic.AtomicLongArray genDistance = new java.util.concurrent.atomic.AtomicLongArray(
+        ChunkProfiler.DIST_BOUNDS.length + 2);
+
     // timings
     final Histogram terrainHist = new Histogram();
     final Histogram populateHist = new Histogram();

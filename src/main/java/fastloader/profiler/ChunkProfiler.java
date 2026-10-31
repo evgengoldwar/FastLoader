@@ -32,6 +32,9 @@ public final class ChunkProfiler {
     public static volatile boolean countSetBlock = true;
     static final int LIGHT_SAMPLE_RATE = 32;
     static final int SET_BLOCK_SAMPLE_RATE = 64;
+    /** upper bounds (inclusive, in chunks) of the "distance to nearest player" buckets */
+    static final int[] DIST_BOUNDS = { 1, 3, 6, 10, 16 };
+    private static final int MAX_CALLER_SAMPLES = 500;
     public static volatile boolean profileEvents = true;
     public static volatile long slowChunkNs = 50_000_000L;
     public static volatile long slowTickNs = 50_000_000L;
@@ -201,6 +204,57 @@ public final class ChunkProfiler {
         finish(st, System.nanoTime());
     }
 
+    /**
+     * A chunk was generated: records how far it is from the nearest player of its world. When the player waits for
+     * the chunks right around them, most generation should happen close to the player.
+     */
+    public static void onGenerated(net.minecraft.world.World world, int cx, int cz) {
+        if (!enabled || world == null) return;
+        int best = Integer.MAX_VALUE;
+        for (Object o : world.playerEntities) {
+            net.minecraft.entity.Entity p = (net.minecraft.entity.Entity) o;
+            int px = (int) Math.floor(p.posX) >> 4;
+            int pz = (int) Math.floor(p.posZ) >> 4;
+            int d = Math.max(Math.abs(px - cx), Math.abs(pz - cz));
+            if (d < best) best = d;
+        }
+        int bucket;
+        if (best == Integer.MAX_VALUE) {
+            bucket = DIST_BOUNDS.length + 1;
+        } else {
+            bucket = 0;
+            while (bucket < DIST_BOUNDS.length && best > DIST_BOUNDS[bucket]) bucket++;
+        }
+        interval.genDistance.incrementAndGet(bucket);
+    }
+
+    /** Remembers who asked for a chunk load that is not part of other chunk work (sampled, it walks the stack). */
+    private static void recordLoadCaller() {
+        Interval iv = interval;
+        if (iv.loadCallerSamples.incrementAndGet() > MAX_CALLER_SAMPLES) return;
+        StackTraceElement[] trace = new Throwable().getStackTrace();
+        StringBuilder sb = new StringBuilder();
+        int taken = 0;
+        for (StackTraceElement e : trace) {
+            String c = e.getClassName();
+            if (c.startsWith("fastloader.") || e.getMethodName()
+                .contains("fastloader$")) continue;
+            if (taken > 0) sb.append(" < ");
+            sb.append(c.substring(c.lastIndexOf('.') + 1))
+                .append('.')
+                .append(e.getMethodName());
+            if (++taken >= 5) break;
+        }
+        String key = sb.toString();
+        LongAdder a = iv.loadCallers.get(key);
+        if (a == null) {
+            a = new LongAdder();
+            LongAdder prev = iv.loadCallers.putIfAbsent(key, a);
+            if (prev != null) a = prev;
+        }
+        a.increment();
+    }
+
     /** {@code safeLoadChunk} or a sync ChunkIO load returned a chunk from disk. */
     public static void onDiskLoad(int dim) {
         if (!enabled) return;
@@ -362,6 +416,7 @@ public final class ChunkProfiler {
         f.detail = null;
         st.depth++;
 
+        if (s == Section.LOAD_CHUNK && st.depth == 1) recordLoadCaller();
         switch (s) {
             case TERRAIN:
                 markLoadFrames(F_GENERATED);

@@ -83,6 +83,7 @@ public abstract class MixinChunkProviderServer {
         remap = false,
         require = 0)
     private void fastloader$terrainAfter(int x, int z, CallbackInfoReturnable<Chunk> cir) {
+        ChunkProfiler.onGenerated(worldObj, x, z);
         ChunkProfiler.pop(Section.TERRAIN);
     }
 

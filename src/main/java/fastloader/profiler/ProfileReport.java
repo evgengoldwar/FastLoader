@@ -152,6 +152,29 @@ public final class ProfileReport {
             }
         }
 
+        // ---- where generation happens and who asks for it
+        StringBuilder dist = new StringBuilder("Generated chunks by distance to the nearest player (chunks):");
+        int lo = 0;
+        for (int i = 0; i < ChunkProfiler.DIST_BOUNDS.length; i++) {
+            dist.append(String.format(" %d-%d: %d", lo, ChunkProfiler.DIST_BOUNDS[i], iv.genDistance.get(i)));
+            lo = ChunkProfiler.DIST_BOUNDS[i] + 1;
+        }
+        dist.append(String.format(" | %d+: %d", lo, iv.genDistance.get(ChunkProfiler.DIST_BOUNDS.length)));
+        dist.append(" | no player in world: ")
+            .append(iv.genDistance.get(ChunkProfiler.DIST_BOUNDS.length + 1));
+        line(sb, "%s", dist);
+        if (!iv.loadCallers.isEmpty()) {
+            line(
+                sb,
+                "Who requests chunk loads outside other chunk work (first %d requests of the interval):",
+                Math.min(iv.loadCallerSamples.get(), 500));
+            List<Map.Entry<String, LongAdder>> callers = new ArrayList<>(iv.loadCallers.entrySet());
+            callers.sort((a, b) -> Long.compare(b.getValue().sum(), a.getValue().sum()));
+            for (int i = 0; i < Math.min(8, callers.size()); i++) {
+                line(sb, "    %5d  %s", callers.get(i).getValue().sum(), callers.get(i).getKey());
+            }
+        }
+
         // ---- world state
         appendWorldState(sb);
         line(sb, "%s", ChunkLookupCache.describe());
