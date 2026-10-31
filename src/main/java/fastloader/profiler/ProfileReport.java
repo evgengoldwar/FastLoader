@@ -231,6 +231,7 @@ public final class ProfileReport {
                 appendTree(sb, root, rootTotal, 0);
             }
         }
+        StackSampler.appendReport(sb);
         line(sb, "==================== end of FastLoader chunk profile ====================");
         return sb.toString();
     }

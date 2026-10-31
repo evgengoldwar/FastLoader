@@ -30,6 +30,10 @@
 
 Плюс:
 
+* **Выборка стеков** — раз в 10 мс снимается стек серверного потока, пока он занят чанками. В отчёте по каждой секции
+  видно, какой метод мода и какой код на вершине стека реально тратит время, даже там, куда нет отдельных хуков
+  (декораторы RWG, генераторы модов, внутренности `setBlock`).
+
 * **Каскадная генерация** — когда во время популяции одного чанка генерируется/грузится соседний. Это главный
   убийца TPS в модпаках. Для каждого случая пишется виновник (конкретный `IWorldGenerator`, жила GT, слушатель
   события...) и путь вызовов.
@@ -72,7 +76,7 @@
 
 `profiler`: `enabled`, `reportAfterIdleSeconds`, `reportIntervalSeconds`, `slowChunkThresholdMs`, `slowTickThresholdMs`,
 `maxLogsPerInterval`, `logCascades`, `profileLighting`, `countSetBlock`, `profileEventListeners`, `topEntries`,
-`writeReportFiles`, `callTreeInLog`.
+`writeReportFiles`, `callTreeInLog`, `stackSampling`, `stackSampleIntervalMs`.
 `pregen`: `tickBudgetMs` (сколько мс тика можно тратить на генерацию), `progressLogSeconds`.
 
 ## Как читать отчёт
