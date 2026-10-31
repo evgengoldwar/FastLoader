@@ -24,7 +24,7 @@ public final class ChunkLookupCache {
     public static long misses;
 
     public static int slot(long key) {
-        // key = x & 0xffffffff | z << 32  ->  (x & 1) | (z & 1) << 1
+        // key = x & 0xffffffff | z << 32 -> (x & 1) | (z & 1) << 1
         return (int) (key & 1L) | (int) ((key >>> 31) & 2L);
     }
 

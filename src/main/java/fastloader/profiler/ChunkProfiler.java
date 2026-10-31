@@ -60,6 +60,7 @@ public final class ChunkProfiler {
 
     static volatile Interval interval = new Interval();
     static volatile Thread serverThread;
+
     /** The server thread (known after the first tick), or null. */
     public static Thread serverThread() {
         return serverThread;
