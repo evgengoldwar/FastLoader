@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
 
 import fastloader.FastLoader;
+import fastloader.optimize.ChunkLookupCache;
 
 /**
  * Hierarchical profiler for the whole chunk pipeline (load, generate, populate, light, save, send).
@@ -59,6 +60,11 @@ public final class ChunkProfiler {
 
     static volatile Interval interval = new Interval();
     static volatile Thread serverThread;
+    /** The server thread (known after the first tick), or null. */
+    public static Thread serverThread() {
+        return serverThread;
+    }
+
     /** State of the server thread, read by the {@link StackSampler}. */
     static volatile ThreadState serverState;
 
@@ -319,6 +325,7 @@ public final class ChunkProfiler {
         epoch++;
         lastGenerated = 0;
         StackSampler.reset();
+        ChunkLookupCache.resetStats();
     }
 
     public static void setEnabled(boolean on) {

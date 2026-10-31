@@ -4,6 +4,7 @@ import java.io.File;
 
 import net.minecraftforge.common.config.Configuration;
 
+import fastloader.optimize.ChunkLookupCache;
 import fastloader.pregen.ChunkPregenerator;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.ProfileReport;
@@ -13,6 +14,7 @@ public class Config {
 
     private static final String PROFILER = "profiler";
     private static final String PREGEN = "pregen";
+    private static final String OPTIMIZATIONS = "optimizations";
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -98,6 +100,15 @@ public class Config {
             "Also write every report (including the full call tree) to <game dir>/fastloader/chunkprofile-*.log.");
         ProfileReport.treeInLog = configuration
             .getBoolean("callTreeInLog", PROFILER, false, "Also put the full call tree into the main log.");
+
+        configuration.setCategoryComment(
+            OPTIMIZATIONS,
+            "Chunk generation optimizations. None of them changes what is generated, only how fast.");
+        ChunkLookupCache.enabled = configuration.getBoolean(
+            "chunkLookupCache",
+            OPTIMIZATIONS,
+            true,
+            "Cache the last 4 chunks looked up through provideChunk (every getBlock/setBlock does such a lookup).");
 
         configuration.setCategoryComment(PREGEN, "/fastloader pregen: benchmark / pregeneration tool.");
         ChunkPregenerator.tickBudgetNs = configuration.getInt(
