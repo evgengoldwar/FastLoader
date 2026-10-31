@@ -8,6 +8,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
+import fastloader.FastLoader;
 import fastloader.profiler.ChunkProfiler;
 
 /**
@@ -85,6 +86,16 @@ public final class FastWorldgenWrites {
     /** @return true if the write was done here, the caller must then return true from setBlock */
     public static boolean tryWrite(World world, int x, int y, int z, Block block, int meta, int flags) {
         if (populateDepth == 0 || !enabled || (flags & 1) != 0 || y < 0 || y >= 256) return false;
+        try {
+            return write(world, x, y, z, block, meta);
+        } catch (Throwable t) {
+            enabled = false;
+            FastLoader.LOG.error("[fast worldgen writes] disabled after an error, using the full setBlock again", t);
+            return false;
+        }
+    }
+
+    private static boolean write(World world, int x, int y, int z, Block block, int meta) {
         if (world.isRemote || world.captureBlockSnapshots) return false;
         if (Thread.currentThread() != ChunkProfiler.serverThread()) return false;
         if (x < -30000000 || z < -30000000 || x >= 30000000 || z >= 30000000) return false;
