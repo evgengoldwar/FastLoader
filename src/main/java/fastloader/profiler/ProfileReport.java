@@ -217,7 +217,8 @@ public final class ProfileReport {
                 sb,
                 flats,
                 rootTotal,
-                "Inside World.setBlock (only the sampled calls, multiply by " + ChunkProfiler.SET_BLOCK_SAMPLE_RATE + " for the real total):",
+                "Inside World.setBlock (only the sampled calls, multiply by " + ChunkProfiler.SET_BLOCK_SAMPLE_RATE
+                    + " for the real total):",
                 Section.SET_BLOCK_SAMPLE,
                 Section.SB_CHUNK,
                 Section.SB_RELIGHT,

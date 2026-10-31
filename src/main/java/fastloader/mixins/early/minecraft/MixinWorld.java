@@ -16,7 +16,8 @@ import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.Section;
 
 /**
- * Light propagation and block writes triggered by worldgen. Both are only counted inside chunk work; 1 of every 32 light
+ * Light propagation and block writes triggered by worldgen. Both are only counted inside chunk work; 1 of every 32
+ * light
  * updates and 1 of every 64 setBlock calls (with its internals) are timed to estimate their cost without distorting it.
  */
 @Mixin(World.class)
