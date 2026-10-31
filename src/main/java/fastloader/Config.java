@@ -7,6 +7,7 @@ import net.minecraftforge.common.config.Configuration;
 import fastloader.pregen.ChunkPregenerator;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.ProfileReport;
+import fastloader.profiler.StackSampler;
 
 public class Config {
 
@@ -81,6 +82,13 @@ public class Config {
             PROFILER,
             true,
             "Log every cascading worldgen event (chunk generated or loaded while another chunk is populated) with its cause.");
+        StackSampler.enabled = configuration.getBoolean(
+            "stackSampling",
+            PROFILER,
+            true,
+            "Sample the server thread's stack while it does chunk work, to explain time inside code that is not instrumented (RWG decorators, mod generators, setBlock internals).");
+        StackSampler.intervalMs = configuration
+            .getInt("stackSampleIntervalMs", PROFILER, 10, 1, 1000, "Milliseconds between two stack samples.");
         ProfileReport.topEntries = configuration
             .getInt("topEntries", PROFILER, 30, 5, 500, "How many rows the 'top' tables of a report contain.");
         ProfileReport.writeFiles = configuration.getBoolean(

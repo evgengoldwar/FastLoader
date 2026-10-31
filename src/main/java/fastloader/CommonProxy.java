@@ -10,6 +10,7 @@ import fastloader.command.CommandFastLoader;
 import fastloader.pregen.ChunkPregenerator;
 import fastloader.profiler.ChunkProfiler;
 import fastloader.profiler.ProfileReport;
+import fastloader.profiler.StackSampler;
 
 public class CommonProxy {
 
@@ -33,10 +34,12 @@ public class CommonProxy {
         ProfileReport.newSession();
         ChunkProfiler.resetInterval();
         event.registerServerCommand(new CommandFastLoader());
+        StackSampler.start();
     }
 
     public void serverStopping(FMLServerStoppingEvent event) {
         ChunkPregenerator.INSTANCE.stop(null);
+        StackSampler.stop();
         if (ChunkProfiler.enabled && ChunkProfiler.hasGeneration()) ProfileReport.manual();
     }
 }

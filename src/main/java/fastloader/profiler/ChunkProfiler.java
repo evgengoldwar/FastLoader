@@ -59,6 +59,8 @@ public final class ChunkProfiler {
 
     static volatile Interval interval = new Interval();
     static volatile Thread serverThread;
+    /** State of the server thread, read by the {@link StackSampler}. */
+    static volatile ThreadState serverState;
 
     // session totals (never reset)
     static final LongAdder totalGenerated = new LongAdder();
@@ -245,7 +247,10 @@ public final class ChunkProfiler {
         Thread t = Thread.currentThread();
         serverThread = t;
         ThreadState st = TL.get();
-        if (st != null) st.setBlockLevel = 0;
+        if (st != null) {
+            st.setBlockLevel = 0;
+            serverState = st;
+        }
         if (st != null && st.depth != 0) {
             // something threw inside a profiled section last tick, drop the stale frames
             st.clear();
@@ -313,6 +318,7 @@ public final class ChunkProfiler {
         interval = new Interval();
         epoch++;
         lastGenerated = 0;
+        StackSampler.reset();
     }
 
     public static void setEnabled(boolean on) {
@@ -329,6 +335,7 @@ public final class ChunkProfiler {
             st = new ThreadState(Thread.currentThread());
             TL.set(st);
             STATES.add(st);
+            if (st.thread == serverThread) serverState = st;
         }
         if (st.hardEpoch != hardEpoch) st.clear();
         if (st.depth == 0 && st.epoch != epoch) st.newTree(epoch);
