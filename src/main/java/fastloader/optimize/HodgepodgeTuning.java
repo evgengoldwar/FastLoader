@@ -8,7 +8,8 @@ import fastloader.FastLoader;
  * Hodgepodge (GTNH) throttles chunk generation to {@code maxChunkGenPerPlayerPerTick} chunks per player per tick
  * within {@code chunkGenBudgetMs} (default 4 chunks / 20 ms = 80 chunks per second at most). With terrain generated
  * on background threads a chunk costs the server thread less, so more of them fit into a tick. These values are
- * applied at server start; Hodgepodge itself never lets generation run past the end of the 50 ms tick.
+ * applied at server start. forcePopulateAgeTicks is left to Hodgepodge: lowering it makes Hodgepodge force-process
+ * holes outside its budget almost every tick at large view distances.
  */
 public final class HodgepodgeTuning {
 
@@ -17,7 +18,6 @@ public final class HodgepodgeTuning {
     public static volatile boolean enabled = true;
     public static volatile int maxChunkGenPerPlayerPerTick = 10;
     public static volatile int chunkGenBudgetMs = 30;
-    public static volatile int forcePopulateAgeTicks = 20;
 
     private static final String CONFIG_CLASS = "com.mitchej123.hodgepodge.config.SpeedupsConfig";
 
@@ -32,7 +32,6 @@ public final class HodgepodgeTuning {
         StringBuilder sb = new StringBuilder();
         set(c, "maxChunkGenPerPlayerPerTick", maxChunkGenPerPlayerPerTick, sb);
         set(c, "chunkGenBudgetMs", chunkGenBudgetMs, sb);
-        set(c, "forcePopulateAgeTicks", forcePopulateAgeTicks, sb);
         if (sb.length() > 0) {
             FastLoader.LOG.info("[hodgepodge] chunk generation throttle tuned:{} (optimizations.hodgepodgeTuning)", sb);
         }

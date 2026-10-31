@@ -186,14 +186,6 @@ public class Config {
             0,
             50,
             "Value for Hodgepodge's chunkGenBudgetMs. Hodgepodge does not count the rest of the tick (entities, block ticks), so values above ~30 can push ticks past 50 ms.");
-        HodgepodgeTuning.forcePopulateAgeTicks = configuration.getInt(
-            "hodgepodgeForcePopulateAgeTicks",
-            OPTIMIZATIONS,
-            20,
-            0,
-            1200,
-            "Value for Hodgepodge's forcePopulateAgeTicks: how long a visible hole next to a player may wait (100 = 5 s by default).");
-
         configuration.setCategoryComment(PREGEN, "/fastloader pregen: benchmark / pregeneration tool.");
         ChunkPregenerator.tickBudgetNs = configuration.getInt(
             "tickBudgetMs",
