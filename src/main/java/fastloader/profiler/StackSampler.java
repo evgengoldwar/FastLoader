@@ -154,7 +154,10 @@ public final class StackSampler {
         Map<String, SectionSamples> copy = new HashMap<>();
         synchronized (LOCK) {
             total = totalSamples;
-            for (Map.Entry<String, SectionSamples> e : current.entrySet()) copy.put(e.getKey(), e.getValue().copy());
+            for (Map.Entry<String, SectionSamples> e : current.entrySet()) copy.put(
+                e.getKey(),
+                e.getValue()
+                    .copy());
         }
         if (total == 0) return;
         sections = new ArrayList<>(copy.entrySet());
@@ -198,8 +201,14 @@ public final class StackSampler {
         SectionSamples copy() {
             SectionSamples c = new SectionSamples();
             c.total = total;
-            for (Map.Entry<String, long[]> e : stackTops.entrySet()) c.stackTops.put(e.getKey(), e.getValue().clone());
-            for (Map.Entry<String, long[]> e : modCode.entrySet()) c.modCode.put(e.getKey(), e.getValue().clone());
+            for (Map.Entry<String, long[]> e : stackTops.entrySet()) c.stackTops.put(
+                e.getKey(),
+                e.getValue()
+                    .clone());
+            for (Map.Entry<String, long[]> e : modCode.entrySet()) c.modCode.put(
+                e.getKey(),
+                e.getValue()
+                    .clone());
             return c;
         }
     }
