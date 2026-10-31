@@ -169,9 +169,21 @@ public final class ProfileReport {
                 "Who requests chunk loads outside other chunk work (first %d requests of the interval):",
                 Math.min(iv.loadCallerSamples.get(), 500));
             List<Map.Entry<String, LongAdder>> callers = new ArrayList<>(iv.loadCallers.entrySet());
-            callers.sort((a, b) -> Long.compare(b.getValue().sum(), a.getValue().sum()));
+            callers.sort(
+                (a, b) -> Long.compare(
+                    b.getValue()
+                        .sum(),
+                    a.getValue()
+                        .sum()));
             for (int i = 0; i < Math.min(8, callers.size()); i++) {
-                line(sb, "    %5d  %s", callers.get(i).getValue().sum(), callers.get(i).getKey());
+                line(
+                    sb,
+                    "    %5d  %s",
+                    callers.get(i)
+                        .getValue()
+                        .sum(),
+                    callers.get(i)
+                        .getKey());
             }
         }
 
