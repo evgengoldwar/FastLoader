@@ -15,7 +15,7 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
     version = Tags.VERSION,
     name = "FastLoader",
     acceptedMinecraftVersions = "[1.7.10]",
-    dependencies = "required-after:etfuturum;after:cubicchunks")
+    dependencies = "required-after:etfuturum;after:cubicchunks;after:angelica")
 public class FastLoader {
 
     public static final String MODID = "fastloader";

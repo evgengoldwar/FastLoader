@@ -38,4 +38,6 @@ dependencies {
     implementation("ganymedes01.etfuturum:Et-Futurum-Requiem:2.7.0-GTNH:dev")
     // Cubic Chunks (optional): tall worlds
     compileOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.30-alpha:dev") { transitive = false }
+    // Angelica (optional): rendering / shaders, loaded before this mod when present
+    compileOnly("com.github.GTNewHorizons:Angelica:2.2.45:dev") { transitive = false }
 }
