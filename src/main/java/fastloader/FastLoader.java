@@ -10,7 +10,12 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
-@Mod(modid = FastLoader.MODID, version = Tags.VERSION, name = "FastLoader", acceptedMinecraftVersions = "[1.7.10]")
+@Mod(
+    modid = FastLoader.MODID,
+    version = Tags.VERSION,
+    name = "FastLoader",
+    acceptedMinecraftVersions = "[1.7.10]",
+    dependencies = "required-after:etfuturum;after:cubicchunks")
 public class FastLoader {
 
     public static final String MODID = "fastloader";

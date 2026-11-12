@@ -1,15 +1,14 @@
 package fastloader.mixins;
 
+import javax.annotation.Nonnull;
+
 import com.gtnewhorizon.gtnhmixins.builders.IMixins;
 import com.gtnewhorizon.gtnhmixins.builders.MixinBuilder;
 
-import javax.annotation.Nonnull;
-
 public enum Mixins implements IMixins {
 
-    EXAMPLE(new MixinBuilder()
-        .setPhase(Phase.EARLY)
-        .addClientMixins("MixinMinecraft_Example"));
+    NEW_NETHER(new MixinBuilder().setPhase(Phase.EARLY)
+        .addCommonMixins("common.MixinWorldProviderHell"));
 
     private final MixinBuilder builder;
 

@@ -34,5 +34,8 @@
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
 dependencies {
-    //runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.7.69-GTNH:dev")
+    // Et Futurum Requiem: modern blocks (basalt, blackstone, nylium, stems...), particles and modern sound assets
+    implementation("ganymedes01.etfuturum:Et-Futurum-Requiem:2.7.0-GTNH:dev")
+    // Cubic Chunks (optional): tall worlds
+    compileOnly("com.cardinalstar.cubicchunks:CubicChunks1710:v0.1.30-alpha:dev") { transitive = false }
 }

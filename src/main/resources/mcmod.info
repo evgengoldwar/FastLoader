@@ -3,7 +3,7 @@
 	"modList": [{
 		"modid": "${modId}",
 		"name": "${modName}",
-		"description": "An example mod for Minecraft 1.7.10 with Forge focused on a stable setup.",
+		"description": "Adds the 'New Generation' world type: modern multi-noise overworld terrain and the modern Nether (Crimson Forest, Warped Forest, Soul Sand Valley, Basalt Deltas) with biome fog, music and ambience.",
 		"version": "${modVersion}",
 		"mcversion": "${minecraftVersion}",
 		"url": "https://github.com/SinTh0r4s/FastLoader",
@@ -13,7 +13,7 @@
 		"logoFile": "",
 		"screenshots": [],
 		"parent": "",
-		"requiredMods": [],
+		"requiredMods": ["etfuturum"],
 		"dependencies": [],
 		"dependants": [],
 		"useDependencyInformation": false
